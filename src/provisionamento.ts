@@ -1,9 +1,11 @@
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import type { Config } from './tipos.js';
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { gerarChave, gerarHash } from "./criptografia.js";
 
-const CAMINHO_CONFIG = join("data", "config.json");
+const PASTA_DADOS = "data";
+const CAMINHO_CONFIG = join(PASTA_DADOS, "config.json");
 
 export async function iniciarSistema(): Promise<void> {
     if (existsSync(CAMINHO_CONFIG)) {
@@ -31,13 +33,22 @@ async function provisionar(): Promise<void> {
         return;
     }
 
-    const chave = gerarChave();
-    const hashSenha = gerarHash(senha);
-
-    console.log("Chave gerada:", chave);
-    console.log("Hash da senha:", hashSenha);
-
     const config = {
-        chaveMestra: 
-    }
+        chaveMestra: gerarChave(),
+        administrador: {
+            usuario: "admin",
+            hashSenha: gerarHash(senha),
+            papel: "administrador"
+        }
+    };
+
+    mkdirSync(PASTA_DADOS, { recursive: true });
+    writeFileSync(CAMINHO_CONFIG, JSON.stringify(config, null, 4));
+
+    console.log("Provisionamento concluído. Usuário 'admin' criado.");
+}
+
+export function lerConfig(): Config {
+    const texto = readFileSync(CAMINHO_CONFIG, 'utf8');
+    return JSON.parse(texto) as Config;
 }
