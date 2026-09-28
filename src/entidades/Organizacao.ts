@@ -44,6 +44,10 @@ export class Organizacao {
         this.ativo = false;
     }
 
+    definirContrato(contrato: Contrato): void {
+        this.contratoVigente = contrato;
+    }
+
     paraDados(): any {
         return {
             id: this.id,

@@ -1,6 +1,7 @@
 import { RepositorioArquivo } from "../persistencia/RepositorioArquivo.js";
 import { ValidadorCNPJ } from "../validadores/ValidadorCNPJ.js";
 import { Organizacao } from "../entidades/Organizacao.js";
+import { Contrato } from "../entidades/Contrato.js";
 
 const ARQUIVO_ORGANIZACOES = "organizacoes.json";
 
@@ -96,6 +97,59 @@ export class ServicoOrganizacao {
         contrato.renovar(novoVencimento);
 
         this.repositorio.salvarEntidade(ARQUIVO_ORGANIZACOES, organizacao.paraDados());
+    }
+
+    registrarContrato(organizacaoId: string, dados: any): Contrato {
+        const organizacao = this.buscarOrganizacao(organizacaoId);
+
+        if (!organizacao.isAtivo()) {
+            throw new Error(`A organização "${organizacao.getId()}" está desativada.`);
+        }
+
+        if (dados.dataVencimento.getTime() <= dados.dataAssinatura.getTime()) {
+            throw new Error("A data de vencimento precisa ser depois da data de assinatura.");
+        }
+
+        if (dados.clausulas.length === 0) {
+            throw new Error("O contrato precisa ter pelo menos uma cláusula.");
+        }
+
+        if (dados.valorMensal < 0) {
+            throw new Error("O valor mensal não pode ser negativo.");
+        }
+
+        const contrato = new Contrato(
+            this.gerarCodigoContrato(),
+            organizacao.getId(),
+            dados.dataAssinatura,
+            dados.dataVencimento,
+            dados.clausulas,
+            dados.valorMensal,
+            dados.renovacaoAutomatica
+        );
+
+        organizacao.definirContrato(contrato);
+        this.repositorio.salvarEntidade(ARQUIVO_ORGANIZACOES, organizacao.paraDados());
+
+        return contrato;
+    }
+
+    private gerarCodigoContrato(): string {
+        let maiorNumero = 0;
+
+        for (const organizacao of this.listarTodas()) {
+            const contrato = organizacao.getContratoVigente();
+
+            if (contrato !== null) {
+                const numero = Number(contrato.getId().replace("CT", ""));
+
+                if (numero > maiorNumero) {
+                    maiorNumero = numero;
+                }
+            }
+        }
+
+        return "CT" + String(maiorNumero + 1).padStart(3, "0");
     }
 
     private listarTodas(): Organizacao[] {

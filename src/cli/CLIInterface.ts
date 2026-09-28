@@ -55,6 +55,21 @@ export class CLIInterface {
                 texto: "Listar organizações ativas",
                 papeisPermitidos: Object.values(PapelUsuario),
                 executar: () => this.telaOrganizacoes.listar()
+            },
+            {
+                texto: "Cadastrar contrato",
+                papeisPermitidos: [PapelUsuario.ADMINISTRADOR, PapelUsuario.OPERADOR_CADASTRO],
+                executar: () => this.telaOrganizacoes.cadastrarContrato()
+            },
+            {
+                texto: "Renovar contrato",
+                papeisPermitidos: [PapelUsuario.ADMINISTRADOR, PapelUsuario.OPERADOR_CADASTRO],
+                executar: () => this.telaOrganizacoes.renovarContrato()
+            },
+            {
+                texto: "Consultar contrato",
+                papeisPermitidos: Object.values(PapelUsuario),
+                executar: () => this.telaOrganizacoes.consultarContrato()
             }
         ];
     }
