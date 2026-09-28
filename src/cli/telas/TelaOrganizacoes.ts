@@ -2,7 +2,7 @@ import type { Interface } from "node:readline/promises";
 import { ServicoOrganizacao } from "../../servicos/ServicoOrganizacao.js";
 import { Organizacao } from "../../entidades/Organizacao.js";
 import { converterData, converterValor, formatarData, formatarValor } from "../conversores.js";
-import { dataValida, ehCancelamento, mensagemDeErro, mostrarComoCancelar, naoVazio, perguntarSimOuNao, perguntarValido } from "../perguntas.js";
+import { dataValida, pediuCancelamento, mensagemDeErro, mostrarComoCancelar, naoVazio, perguntarSimOuNao, perguntarValido } from "../perguntas.js";
 import { sucesso, aviso, erro } from "../mensagens.js";
 
 export class TelaOrganizacoes {
@@ -140,7 +140,7 @@ export class TelaOrganizacoes {
         while (true) {
             const clausula = (await this.terminal.question(`  Cláusula ${clausulas.length + 1}: `)).trim();
 
-            if (ehCancelamento(clausula, true)) {
+            if (pediuCancelamento(clausula, true)) {
                 aviso("Cadastro de contrato cancelado.");
                 return;
             }

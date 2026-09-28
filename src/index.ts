@@ -6,6 +6,7 @@ import { ServicoOrganizacao } from "./servicos/ServicoOrganizacao.js";
 import { ServicoLote } from "./servicos/ServicoLote.js";
 import { ServicoEquipamento } from "./servicos/ServicoEquipamento.js";
 import { ServicoJournal } from "./servicos/ServicoJournal.js";
+import { ServicoParametros } from "./servicos/ServicoParametros.js";
 import { HistoricoComandos } from "./cli/HistoricoComandos.js";
 import { CLIInterface } from "./cli/CLIInterface.js";
 
@@ -36,6 +37,7 @@ const autenticacao = new ServicoAutenticacao(repositorio);
 const organizacao = new ServicoOrganizacao(repositorio);
 const equipamento = new ServicoEquipamento(repositorio);
 const lote = new ServicoLote(repositorio, organizacao, equipamento);
+const parametros = new ServicoParametros(repositorio);
 
-cli = new CLIInterface(autenticacao, organizacao, lote, equipamento, journal, terminal, historico);
+cli = new CLIInterface(autenticacao, organizacao, lote, equipamento, journal, parametros, terminal, historico);
 await cli.iniciarLoop();

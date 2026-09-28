@@ -3,7 +3,7 @@ import { ValidadorDataEntrada } from "../validadores/ValidadorDataEntrada.js";
 import { converterData, formatarData } from "./conversores.js";
 import { erro } from "./mensagens.js";
 
-export function ehCancelamento(texto: string, zeroCancela: boolean): boolean {
+export function pediuCancelamento(texto: string, zeroCancela: boolean): boolean {
     const resposta = texto.trim().toLowerCase();
     return resposta === "cancelar" || (zeroCancela && resposta === "0");
 }
@@ -56,7 +56,7 @@ export async function perguntarValido(
         const texto = resposta.trim();
         resposta = undefined;
 
-        if (ehCancelamento(texto, zeroCancela)) {
+        if (pediuCancelamento(texto, zeroCancela)) {
             return null;
         }
 
@@ -80,7 +80,7 @@ export async function escolherOpcao(terminal: Interface, titulo: string, opcoes:
     while (true) {
         const escolha = (await terminal.question("Opção: ")).trim();
 
-        if (ehCancelamento(escolha, true)) {
+        if (pediuCancelamento(escolha, true)) {
             return null;
         }
 
@@ -127,7 +127,7 @@ export async function perguntarDataEntrada(terminal: Interface, informada: strin
         const texto = resposta.trim();
         resposta = undefined;
 
-        if (ehCancelamento(texto, true)) {
+        if (pediuCancelamento(texto, true)) {
             return null;
         }
 

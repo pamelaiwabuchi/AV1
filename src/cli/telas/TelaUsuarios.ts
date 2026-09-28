@@ -24,6 +24,10 @@ export class TelaUsuarios {
                 return "O nome não pode ficar vazio.";
             }
 
+            if (texto.toLowerCase() === "sair") {
+                return "O nome \"sair\" é reservado para encerrar o sistema. Escolha outro nome.";
+            }
+
             const jaExiste = this.autenticacao.listarUsuarios().find((c) => c.getUsuario() === texto.toLowerCase());
 
             if (jaExiste !== undefined) {

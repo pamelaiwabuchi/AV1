@@ -82,6 +82,22 @@ export class Equipamento {
         this.registrarMovimentacao(this.statusRastreamento, responsavel, this.statusRastreamento, observacao);
     }
 
+    calcularDepreciacao(coeficienteAnual: number): number {
+        const idade = new Date().getFullYear() - this.anoFabricacao;
+
+        if (idade <= 0) {
+            return 0;
+        }
+
+        const depreciacao = coeficienteAnual * idade;
+
+        if (depreciacao > 100) {
+            return 100;
+        }
+
+        return depreciacao;
+    }
+
     registrarMovimentacao(destino: string, responsavel: string, origem: string = "", observacao: string = ""): void {
         const movimentacao = new Movimentacao(
             `${this.id}-${this.historicoMovimentacao.length + 1}`,

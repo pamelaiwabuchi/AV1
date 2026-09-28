@@ -4,6 +4,7 @@ import { ServicoOrganizacao } from "../servicos/ServicoOrganizacao.js";
 import { ServicoLote } from "../servicos/ServicoLote.js";
 import { ServicoEquipamento } from "../servicos/ServicoEquipamento.js";
 import { ServicoJournal } from "../servicos/ServicoJournal.js";
+import { ServicoParametros } from "../servicos/ServicoParametros.js";
 import { Sessao } from "../entidades/Sessao.js";
 import { PapelUsuario } from "../enums/PapelUsuario.js";
 import { HistoricoComandos } from "./HistoricoComandos.js";
@@ -14,6 +15,7 @@ import { TelaOrganizacoes } from "./telas/TelaOrganizacoes.js";
 import { TelaLotes } from "./telas/TelaLotes.js";
 import { TelaEquipamentos } from "./telas/TelaEquipamentos.js";
 import { TelaJournal } from "./telas/TelaJournal.js";
+import { TelaParametros } from "./telas/TelaParametros.js";
 
 interface OpcaoMenu {
     texto: string;
@@ -35,6 +37,7 @@ export class CLIInterface {
     private lote: ServicoLote;
     private equipamento: ServicoEquipamento;
     private journal: ServicoJournal;
+    private parametros: ServicoParametros;
     private sessaoAtual: Sessao | null;
     private terminal: Interface;
     private historico: HistoricoComandos;
@@ -43,6 +46,7 @@ export class CLIInterface {
     private telaLotes: TelaLotes;
     private telaEquipamentos: TelaEquipamentos;
     private telaJournal: TelaJournal;
+    private telaParametros: TelaParametros;
     private opcoes: OpcaoMenu[];
 
     constructor(
@@ -51,6 +55,7 @@ export class CLIInterface {
         lote: ServicoLote,
         equipamento: ServicoEquipamento,
         journal: ServicoJournal,
+        parametros: ServicoParametros,
         terminal: Interface,
         historico: HistoricoComandos
     ) {
@@ -59,6 +64,7 @@ export class CLIInterface {
         this.lote = lote;
         this.equipamento = equipamento;
         this.journal = journal;
+        this.parametros = parametros;
         this.sessaoAtual = null;
         this.terminal = terminal;
         this.historico = historico;
@@ -66,8 +72,9 @@ export class CLIInterface {
         this.telaUsuarios = new TelaUsuarios(this.autenticacao, this.terminal, this.historico);
         this.telaOrganizacoes = new TelaOrganizacoes(this.organizacao, this.terminal);
         this.telaLotes = new TelaLotes(this.lote, this.equipamento, this.terminal);
-        this.telaEquipamentos = new TelaEquipamentos(this.lote, this.equipamento, this.terminal);
+        this.telaEquipamentos = new TelaEquipamentos(this.lote, this.equipamento, this.parametros, this.terminal);
         this.telaJournal = new TelaJournal(this.journal, this.terminal);
+        this.telaParametros = new TelaParametros(this.parametros, this.terminal);
 
         this.opcoes = [
             {
@@ -188,6 +195,27 @@ export class CLIInterface {
                 uso: "journal consultar --inicio <dd/mm/aaaa> --fim <dd/mm/aaaa>",
                 papeisPermitidos: [ADMIN, AUDITOR],
                 executar: (_sessao, parametros) => this.telaJournal.consultarPorPeriodo(parametros)
+            },
+            {
+                texto: "Consultar parâmetros globais",
+                comando: "parametros consultar",
+                uso: "parametros consultar",
+                papeisPermitidos: TODOS,
+                executar: () => this.telaParametros.consultar()
+            },
+            {
+                texto: "Alterar alíquota de impostos",
+                comando: "parametros aliquota",
+                uso: "parametros aliquota",
+                papeisPermitidos: [ADMIN],
+                executar: () => this.telaParametros.alterarAliquota()
+            },
+            {
+                texto: "Alterar coeficiente de depreciação",
+                comando: "parametros depreciacao",
+                uso: "parametros depreciacao",
+                papeisPermitidos: [ADMIN],
+                executar: () => this.telaParametros.alterarCoeficiente()
             }
         ];
     }
@@ -197,7 +225,13 @@ export class CLIInterface {
             const sessao = this.sessaoAtual;
 
             if (sessao === null) {
-                await this.fazerLogin();
+                const continuar = await this.fazerLogin();
+
+                if (!continuar) {
+                    console.log("Sistema encerrado. Até logo!");
+                    break;
+                }
+
                 continue;
             }
 
@@ -329,9 +363,15 @@ export class CLIInterface {
         return this.opcoes.filter((opcao) => opcao.papeisPermitidos.includes(papel));
     }
 
-    private async fazerLogin(): Promise<void> {
+    private async fazerLogin(): Promise<boolean> {
         console.log("");
+        console.log("(Digite \"sair\" no campo usuário para encerrar o sistema.)");
         const usuario = (await this.terminal.question("Usuário: ")).trim().toLowerCase();
+
+        if (usuario === "sair") {
+            return false;
+        }
+
         const senha = await this.historico.perguntarSenha(this.terminal, "Senha: ");
 
         this.journal.definirUsuario(usuario);
@@ -345,5 +385,7 @@ export class CLIInterface {
             this.journal.registrar("LOGIN_FALHA", "sessao", null, { usuarioInformado: usuario });
             erro((e as Error).message);
         }
+
+        return true;
     }
 }

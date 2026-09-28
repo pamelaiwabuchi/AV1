@@ -1,6 +1,7 @@
 import type { Interface } from "node:readline/promises";
 import { ServicoLote } from "../../servicos/ServicoLote.js";
 import { ServicoEquipamento } from "../../servicos/ServicoEquipamento.js";
+import { ServicoParametros } from "../../servicos/ServicoParametros.js";
 import { StatusRastreamento } from "../../enums/StatusRastreamento.js";
 import { formatarData } from "../conversores.js";
 import { escolherOpcao, mensagemDeErro, mostrarComoCancelar, naoVazio, perguntarValido } from "../perguntas.js";
@@ -9,11 +10,13 @@ import { sucesso, aviso, erro } from "../mensagens.js";
 export class TelaEquipamentos {
     private lote: ServicoLote;
     private equipamento: ServicoEquipamento;
+    private parametros: ServicoParametros;
     private terminal: Interface;
 
-    constructor(lote: ServicoLote, equipamento: ServicoEquipamento, terminal: Interface) {
+    constructor(lote: ServicoLote, equipamento: ServicoEquipamento, parametros: ServicoParametros, terminal: Interface) {
         this.lote = lote;
         this.equipamento = equipamento;
+        this.parametros = parametros;
         this.terminal = terminal;
     }
 
@@ -82,6 +85,11 @@ export class TelaEquipamentos {
         console.log(`  ${equipamento.getTipo()} ${equipamento.getMarca()} ${equipamento.getModelo()} (${equipamento.getAnoFabricacao()}), ${equipamento.getPesoQuilogramas()} kg`);
         console.log(`  Organização: ${lote.getOrganizacaoId()} | Lote: ${lote.getId()} (NF ${lote.getNotaFiscal()}, entrada ${formatarData(lote.getDataEntrada())}) | Posição no lote: ${equipamento.getPosicaoNoLote()}`);
         console.log(`  Estado físico: ${equipamento.getEstadoFisico()} | Status: ${equipamento.getStatusRastreamento()}`);
+
+        const coeficiente = this.parametros.obterCoeficiente(equipamento.getTipo());
+        const depreciacao = equipamento.calcularDepreciacao(coeficiente);
+        console.log(`  Depreciação: ${depreciacao.toLocaleString("pt-BR")}% (taxa de ${coeficiente.toLocaleString("pt-BR")}% ao ano)`);
+
         console.log("  Movimentações:");
 
         for (const movimentacao of historico.movimentacoes) {
