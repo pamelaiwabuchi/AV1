@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
-import { CriptografiaArquivo } from "../src/CriptografiaArquivo.js";
-import { RepositorioArquivo } from "../src/RepositorioArquivo.js";
-import { ServicoAutenticacao } from "../src/ServicoAutenticacao.js";
+import { CriptografiaArquivo } from "../src/persistencia/CriptografiaArquivo.js";
+import { RepositorioArquivo } from "../src/persistencia/RepositorioArquivo.js";
+import { ServicoAutenticacao } from "../src/servicos/ServicoAutenticacao.js";
 import { PapelUsuario } from "../src/enums/PapelUsuario.js";
 
 rmSync("data-teste", { recursive: true, force: true });

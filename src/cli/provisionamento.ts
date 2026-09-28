@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Interface } from "node:readline/promises";
-import { CriptografiaArquivo } from "./CriptografiaArquivo.js";
-import { RepositorioArquivo } from "./RepositorioArquivo.js";
-import { ServicoAutenticacao } from "./ServicoAutenticacao.js";
+import { CriptografiaArquivo } from "../persistencia/CriptografiaArquivo.js";
+import { RepositorioArquivo } from "../persistencia/RepositorioArquivo.js";
+import { ServicoAutenticacao } from "../servicos/ServicoAutenticacao.js";
 import { PapelUsuario } from "../enums/PapelUsuario.js";
 
 export const PASTA_DADOS = "data";

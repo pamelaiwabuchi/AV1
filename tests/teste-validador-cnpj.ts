@@ -1,5 +1,4 @@
-import { ValidadorCNPJ } from "../src/ValidadorCNPJ.js";
-
+import { ValidadorCNPJ } from "../src/validadores/ValidadorCNPJ.js";
 const validador = new ValidadorCNPJ();
 
 const casos = [

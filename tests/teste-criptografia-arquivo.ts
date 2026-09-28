@@ -1,4 +1,4 @@
-import { CriptografiaArquivo } from "../src/CriptografiaArquivo.js";
+import { CriptografiaArquivo } from "../src/persistencia/CriptografiaArquivo.js";
 
 const cripto = new CriptografiaArquivo();
 
