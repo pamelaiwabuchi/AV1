@@ -137,6 +137,10 @@ export class ServicoEquipamento {
         return encontrado;
     }
 
+    listarPorStatus(status: StatusRastreamento): Equipamento[] {
+        return this.listarTodos().filter((e) => e.getStatusRastreamento() === status);
+    }
+
     listarPorLote(loteId: string): Equipamento[] {
         return this.listarTodos().filter((e) => e.getLoteId() === loteId);
     }

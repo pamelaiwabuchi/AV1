@@ -4,6 +4,13 @@ import { Organizacao } from "../entidades/Organizacao.js";
 import { Contrato } from "../entidades/Contrato.js";
 
 const ARQUIVO_ORGANIZACOES = "organizacoes.json";
+const ARQUIVO_CONTRATOS_ANTERIORES = "contratos-anteriores.json";
+
+export interface ContratoNoHistorico {
+    contrato: Contrato;
+    fimEfetivo: Date;
+    atual: boolean;
+}
 
 export class ServicoOrganizacao {
     private readonly repositorio: RepositorioArquivo;
@@ -140,14 +147,75 @@ export class ServicoOrganizacao {
             dados.renovacaoAutomatica
         );
 
+        const contratoAnterior = organizacao.getContratoVigente();
+
+        if (contratoAnterior !== null) {
+            this.guardarContratoAnterior(contratoAnterior, contrato.getDataAssinatura());
+        }
+
         organizacao.definirContrato(contrato);
         this.repositorio.salvarEntidade(ARQUIVO_ORGANIZACOES, organizacao.paraDados());
 
         return contrato;
     }
 
+    listarOrganizacoes(): Organizacao[] {
+        return this.listarTodas();
+    }
+
+    listarContratosDaOrganizacao(organizacaoId: string): ContratoNoHistorico[] {
+        const organizacao = this.buscarOrganizacao(organizacaoId);
+        const resultado: ContratoNoHistorico[] = [];
+
+        for (const dados of this.repositorio.listarEntidades(ARQUIVO_CONTRATOS_ANTERIORES)) {
+            if (dados.organizacaoId === organizacao.getId()) {
+                resultado.push({
+                    contrato: Contrato.deDados(dados),
+                    fimEfetivo: new Date(dados.fimEfetivo),
+                    atual: false
+                });
+            }
+        }
+
+        const atual = organizacao.getContratoVigente();
+
+        if (atual !== null) {
+            resultado.push({
+                contrato: atual,
+                fimEfetivo: atual.getDataVencimento(),
+                atual: true
+            });
+        }
+
+        return resultado;
+    }
+
+    private guardarContratoAnterior(anterior: Contrato, inicioDoNovo: Date): void {
+        const diaAnteriorAoNovo = new Date(inicioDoNovo);
+        diaAnteriorAoNovo.setDate(diaAnteriorAoNovo.getDate() - 1);
+
+        let fimEfetivo = anterior.getDataVencimento();
+
+        if (diaAnteriorAoNovo.getTime() < fimEfetivo.getTime()) {
+            fimEfetivo = diaAnteriorAoNovo;
+        }
+
+        const dados = anterior.paraDados();
+        dados.fimEfetivo = fimEfetivo;
+
+        this.repositorio.salvarEntidade(ARQUIVO_CONTRATOS_ANTERIORES, dados);
+    }
+
     private gerarCodigoContrato(): string {
         let maiorNumero = 0;
+
+        for (const dados of this.repositorio.listarEntidades(ARQUIVO_CONTRATOS_ANTERIORES)) {
+            const numero = Number(String(dados.id).replace("CT", ""));
+
+            if (numero > maiorNumero) {
+                maiorNumero = numero;
+            }
+        }
 
         for (const organizacao of this.listarTodas()) {
             const contrato = organizacao.getContratoVigente();

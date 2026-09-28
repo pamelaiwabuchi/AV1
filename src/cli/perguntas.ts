@@ -153,3 +153,67 @@ export async function perguntarDataEntrada(terminal: Interface, informada: strin
         return data;
     }
 }
+
+export async function escolherPeriodo(terminal: Interface): Promise<{ inicio: Date; fim: Date } | null> {
+    const opcoes = [
+        "Último mês",
+        "Últimos 3 meses",
+        "Últimos 6 meses",
+        "Últimos 12 meses",
+        "Últimos 5 anos",
+        "Informar as datas"
+    ];
+
+    const escolha = await escolherOpcao(terminal, "Período do relatório", opcoes);
+
+    if (escolha === null) {
+        return null;
+    }
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const inicio = new Date(hoje);
+
+    if (escolha === "Último mês") {
+        inicio.setMonth(inicio.getMonth() - 1);
+    } else if (escolha === "Últimos 3 meses") {
+        inicio.setMonth(inicio.getMonth() - 3);
+    } else if (escolha === "Últimos 6 meses") {
+        inicio.setMonth(inicio.getMonth() - 6);
+    } else if (escolha === "Últimos 12 meses") {
+        inicio.setFullYear(inicio.getFullYear() - 1);
+    } else if (escolha === "Últimos 5 anos") {
+        inicio.setFullYear(inicio.getFullYear() - 5);
+    } else {
+        const textoInicio = await perguntarValido(terminal, "Data inicial (dd/mm/aaaa): ", dataValida, true);
+
+        if (textoInicio === null) {
+            return null;
+        }
+
+        const dataInicio = converterData(textoInicio) as Date;
+
+        const textoFim = await perguntarValido(terminal, "Data final (dd/mm/aaaa): ", (texto) => {
+            const fim = converterData(texto);
+
+            if (fim === null) {
+                return "Data inválida. Use o formato dd/mm/aaaa.";
+            }
+
+            if (fim.getTime() < dataInicio.getTime()) {
+                return "A data final precisa ser igual ou posterior à data inicial.";
+            }
+
+            return null;
+        }, true);
+
+        if (textoFim === null) {
+            return null;
+        }
+
+        return { inicio: dataInicio, fim: converterData(textoFim) as Date };
+    }
+
+    return { inicio: inicio, fim: hoje };
+}

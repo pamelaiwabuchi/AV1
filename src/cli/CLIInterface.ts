@@ -5,6 +5,7 @@ import { ServicoLote } from "../servicos/ServicoLote.js";
 import { ServicoEquipamento } from "../servicos/ServicoEquipamento.js";
 import { ServicoJournal } from "../servicos/ServicoJournal.js";
 import { ServicoParametros } from "../servicos/ServicoParametros.js";
+import { ServicoRelatorio } from "../servicos/ServicoRelatorio.js";
 import { Sessao } from "../entidades/Sessao.js";
 import { PapelUsuario } from "../enums/PapelUsuario.js";
 import { HistoricoComandos } from "./HistoricoComandos.js";
@@ -16,6 +17,7 @@ import { TelaLotes } from "./telas/TelaLotes.js";
 import { TelaEquipamentos } from "./telas/TelaEquipamentos.js";
 import { TelaJournal } from "./telas/TelaJournal.js";
 import { TelaParametros } from "./telas/TelaParametros.js";
+import { TelaRelatorios } from "./telas/TelaRelatorios.js";
 
 interface OpcaoMenu {
     texto: string;
@@ -38,6 +40,7 @@ export class CLIInterface {
     private equipamento: ServicoEquipamento;
     private journal: ServicoJournal;
     private parametros: ServicoParametros;
+    private relatorio: ServicoRelatorio;
     private sessaoAtual: Sessao | null;
     private terminal: Interface;
     private historico: HistoricoComandos;
@@ -47,6 +50,7 @@ export class CLIInterface {
     private telaEquipamentos: TelaEquipamentos;
     private telaJournal: TelaJournal;
     private telaParametros: TelaParametros;
+    private telaRelatorios: TelaRelatorios;
     private opcoes: OpcaoMenu[];
 
     constructor(
@@ -56,6 +60,7 @@ export class CLIInterface {
         equipamento: ServicoEquipamento,
         journal: ServicoJournal,
         parametros: ServicoParametros,
+        relatorio: ServicoRelatorio,
         terminal: Interface,
         historico: HistoricoComandos
     ) {
@@ -65,6 +70,7 @@ export class CLIInterface {
         this.equipamento = equipamento;
         this.journal = journal;
         this.parametros = parametros;
+        this.relatorio = relatorio;
         this.sessaoAtual = null;
         this.terminal = terminal;
         this.historico = historico;
@@ -75,6 +81,7 @@ export class CLIInterface {
         this.telaEquipamentos = new TelaEquipamentos(this.lote, this.equipamento, this.parametros, this.terminal);
         this.telaJournal = new TelaJournal(this.journal, this.terminal);
         this.telaParametros = new TelaParametros(this.parametros, this.terminal);
+        this.telaRelatorios = new TelaRelatorios(this.relatorio, this.organizacao, this.terminal);
 
         this.opcoes = [
             {
@@ -216,6 +223,27 @@ export class CLIInterface {
                 uso: "parametros depreciacao",
                 papeisPermitidos: [ADMIN],
                 executar: () => this.telaParametros.alterarCoeficiente()
+            },
+            {
+                texto: "Relatório por organização",
+                comando: "relatorio organizacao",
+                uso: "relatorio organizacao --org <código>",
+                papeisPermitidos: [ADMIN, AUDITOR],
+                executar: (_sessao, parametros) => this.telaRelatorios.porOrganizacao(parametros)
+            },
+            {
+                texto: "Relatório por status",
+                comando: "relatorio status",
+                uso: "relatorio status",
+                papeisPermitidos: [ADMIN, AUDITOR],
+                executar: () => this.telaRelatorios.porStatus()
+            },
+            {
+                texto: "Relatório financeiro",
+                comando: "relatorio financeiro",
+                uso: "relatorio financeiro",
+                papeisPermitidos: [ADMIN, AUDITOR],
+                executar: () => this.telaRelatorios.financeiro()
             }
         ];
     }
