@@ -1,5 +1,5 @@
-import { CriptografiaArquivo } from "./CriptografiaArquivo.js";
-import { RepositorioArquivo } from "./RepositorioArquivo.js";
+import { CriptografiaArquivo } from "../src/CriptografiaArquivo.js";
+import { RepositorioArquivo } from "../src/RepositorioArquivo.js";
 
 const chave = new CriptografiaArquivo().gerarChave();
 const repositorio = new RepositorioArquivo("data-teste", chave);
