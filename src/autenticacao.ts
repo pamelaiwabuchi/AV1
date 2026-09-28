@@ -12,7 +12,7 @@ export async function fazerLogin(): Promise<Usuario | null> {
         output: process.stdout
     });
 
-    const nomeDigitado = await terminal.question("Usuário: ");
+    const nomeDigitado = (await terminal.question("Usuário: ")).trim().toLowerCase();
     const senhaDigitada = await terminal.question("Senha: ");
 
     terminal.close();

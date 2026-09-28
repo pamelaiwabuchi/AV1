@@ -67,3 +67,5 @@ Se quiser, posso transformar isso num documento para você ir atualizando ao lon
 
 
 Para a lista de "deixar para o final", ficam então: salt, política de senha forte (tamanho mínimo, número, símbolo, maiúscula) e esconder a senha na digitação.
+
+Encerramento automático da sessão aos 30 minutos, com aviso aos 25 minutos, usando setTimeout, interrompendo o question com AbortController e reagendando os temporizadores a cada ação.

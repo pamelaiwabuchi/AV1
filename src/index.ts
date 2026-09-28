@@ -1,11 +1,19 @@
-import { iniciarSistema } from "./provisionamento.js"
+import { iniciarSistema } from "./provisionamento.js";
 import { fazerLogin } from "./autenticacao.js";
-
+import { abrirMenu } from "./menu.js";
 
 await iniciarSistema();
 
-const usuarioLogado = await fazerLogin();
+while (true) {
+    const usuarioLogado = await fazerLogin();
 
-if (usuarioLogado === null) {
-    process.exit(1);
+    if (usuarioLogado === null) {
+        continue;
+    }
+
+    const resultado = await abrirMenu(usuarioLogado);
+
+    if (resultado === "sair") {
+        break;
+    }
 }

@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import type { Config } from './tipos.js';
+import { Papel } from "./tipos.js";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { gerarChave, gerarHash } from "./criptografia.js";
@@ -38,7 +39,7 @@ async function provisionar(): Promise<void> {
         administrador: {
             usuario: "admin",
             hashSenha: gerarHash(senha),
-            papel: "administrador"
+            papel: Papel.Administrador
         }
     };
 
