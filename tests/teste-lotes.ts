@@ -4,6 +4,7 @@ import { RepositorioArquivo } from "../src/persistencia/RepositorioArquivo.js";
 import { ServicoOrganizacao } from "../src/servicos/ServicoOrganizacao.js";
 import { ServicoLote } from "../src/servicos/ServicoLote.js";
 import { ValidadorDataEntrada } from "../src/validadores/ValidadorDataEntrada.js";
+import { ServicoEquipamento } from "../src/servicos/ServicoEquipamento.js";
 
 function tentar(descricao: string, acao: () => void): void {
     try {
@@ -34,7 +35,7 @@ rmSync("data-teste", { recursive: true, force: true });
 const chave = new CriptografiaArquivo().gerarChave();
 const repositorio = new RepositorioArquivo("data-teste", chave);
 const organizacoes = new ServicoOrganizacao(repositorio);
-const lotes = new ServicoLote(repositorio, organizacoes);
+const lotes = new ServicoLote(repositorio, organizacoes, new ServicoEquipamento(repositorio));
 
 function dadosOrganizacao(razaoSocial: string, cnpj: string): any {
     return {
