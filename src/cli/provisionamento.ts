@@ -9,7 +9,7 @@ import { PapelUsuario } from "../enums/PapelUsuario.js";
 import { HistoricoComandos } from "./HistoricoComandos.js";
 import { sucesso, erro } from "./mensagens.js";
 
-export const PASTA_DADOS = "data";
+export const PASTA_DADOS = process.env.GREENCODE_DADOS ?? "data";
 const CAMINHO_CONFIG = join(PASTA_DADOS, "config.json");
 const USUARIO_ADMIN = "admin";
 

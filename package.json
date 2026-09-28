@@ -1,17 +1,23 @@
 {
   "name": "av1",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "greencode - sistema de logística reversa de equipamentos eletrônicos (CLI em Node.js e TypeScript)",
+  "main": "src/index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "npx tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "verificar": "tsc --noEmit",
+    "test": "tsx tests/jornada-completa.ts"
+  },
+  "engines": {
+    "node": ">=20.6"
   },
   "keywords": [],
-  "author": "",
+  "author": "Pamela Iwabuchi",
   "license": "ISC",
   "type": "module",
   "devDependencies": {
-    "@types/node": "^26.6.2"
+    "@types/node": "^26.6.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   }
 }
