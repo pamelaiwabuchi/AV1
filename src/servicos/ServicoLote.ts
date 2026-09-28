@@ -1,8 +1,9 @@
 import { RepositorioArquivo } from "../persistencia/RepositorioArquivo.js";
 import { ServicoOrganizacao } from "./ServicoOrganizacao.js";
-import { ServicoEquipamento } from "./ServicoEquipamento.js";
+import { ServicoEquipamento, DESTINOS_FINAIS } from "./ServicoEquipamento.js";
 import { ValidadorDataEntrada } from "../validadores/ValidadorDataEntrada.js";
 import { Lote } from "../entidades/Lote.js";
+import { Organizacao } from "../entidades/Organizacao.js";
 import { Equipamento } from "../entidades/Equipamento.js";
 import { StatusLote } from "../enums/StatusLote.js";
 import { StatusRastreamento } from "../enums/StatusRastreamento.js";
@@ -24,27 +25,16 @@ export class ServicoLote {
     }
 
     criarLote(dados: any): Lote {
-        const organizacao = this.organizacoes.buscarOrganizacao(dados.organizacaoId);
+        const organizacao = this.buscarOrganizacaoApta(dados.organizacaoId);
 
-        if (!organizacao.isAtivo()) {
-            throw new Error(`A organização "${organizacao.getId()}" está desativada e não pode registrar lotes.`);
-        }
+        const problemaNota = this.verificarNotaFiscal(organizacao.getId(), dados.notaFiscal);
 
-        const contrato = organizacao.getContratoVigente();
-
-        if (contrato === null || !contrato.estaVigente()) {
-            throw new Error(
-                `A organização "${organizacao.getId()}" não possui contrato vigente. ` +
-                `Um operador de cadastro ou administrador precisa usar as opções "Cadastrar contrato" ou "Renovar contrato".`
-            );
+        if (problemaNota !== null) {
+            throw new Error(problemaNota);
         }
 
         const notaFiscal = dados.notaFiscal.trim();
         const transportadora = dados.transportadora.trim();
-
-        if (notaFiscal === "") {
-            throw new Error("A nota fiscal é obrigatória.");
-        }
 
         if (transportadora === "") {
             throw new Error("A transportadora é obrigatória.");
@@ -55,12 +45,6 @@ export class ServicoLote {
         }
 
         const todos = this.listarTodos();
-
-        const notaRepetida = todos.find((l) => l.getOrganizacaoId() === organizacao.getId() && l.getNotaFiscal() === notaFiscal);
-
-        if (notaRepetida !== undefined) {
-            throw new Error(`A nota fiscal ${notaFiscal} já foi registrada para a organização ${organizacao.getId()} no lote ${notaRepetida.getId()}.`);
-        }
 
         const id = "LT" + String(todos.length + 1).padStart(3, "0");
 
@@ -77,6 +61,47 @@ export class ServicoLote {
         this.repositorio.salvarEntidade(ARQUIVO_LOTES, lote.paraDados());
 
         return lote;
+    }
+
+    verificarOrganizacao(organizacaoId: string): string | null {
+        try {
+            this.buscarOrganizacaoApta(organizacaoId);
+            return null;
+        } catch (e) {
+            return (e as Error).message;
+        }
+    }
+
+    verificarNotaFiscal(organizacaoId: string, notaFiscal: string): string | null {
+        const nota = notaFiscal.trim();
+
+        if (nota === "") {
+            return "A nota fiscal é obrigatória.";
+        }
+
+        const id = organizacaoId.trim().toUpperCase();
+        const repetida = this.listarTodos().find((l) => l.getOrganizacaoId() === id && l.getNotaFiscal() === nota);
+
+        if (repetida !== undefined) {
+            return `A nota fiscal ${nota} já foi registrada para a organização ${id} no lote ${repetida.getId()}.`;
+        }
+
+        return null;
+    }
+
+    verificarLoteAceitaEquipamentos(loteId: string): string | null {
+        try {
+            const lote = this.buscarLote(loteId);
+            const status = lote.getStatusProcessamento();
+
+            if (status !== StatusLote.RECEBIDO && status !== StatusLote.EM_TRIAGEM) {
+                return `O lote ${lote.getId()} está com status ${status} e não aceita novos equipamentos.`;
+            }
+
+            return null;
+        } catch (e) {
+            return (e as Error).message;
+        }
     }
 
     adicionarEquipamentoLote(loteId: string, dados: any, responsavel: string): Equipamento {
@@ -124,16 +149,16 @@ export class ServicoLote {
         }
 
         const avaliado = this.equipamentos.atualizarEstadoFisico(equipamento.getId(), novoEstado, justificativa, responsavel);
-
-        const lote = this.buscarLote(avaliado.getLoteId());
-        const faltamTriar = lote.getEquipamentos().filter((e) => e.getStatusRastreamento() === StatusRastreamento.EM_TRIAGEM);
-
-        if (faltamTriar.length === 0) {
-            lote.alterarStatus(StatusLote.TRIAGEM_CONCLUIDA);
-            this.repositorio.salvarEntidade(ARQUIVO_LOTES, lote.paraDados());
-        }
+        this.recalcularStatus(avaliado.getLoteId());
 
         return avaliado;
+    }
+
+    movimentarEquipamento(codigoEquipamento: string, novoStatus: StatusRastreamento, justificativa: string, responsavel: string): Equipamento {
+        const movimentado = this.equipamentos.movimentarEquipamento(codigoEquipamento, novoStatus, justificativa, responsavel);
+        this.recalcularStatus(movimentado.getLoteId());
+
+        return movimentado;
     }
 
     buscarLote(id: string): Lote {
@@ -161,6 +186,54 @@ export class ServicoLote {
             const entrada = l.getDataEntrada().getTime();
             return entrada >= dataInicio.getTime() && entrada <= dataFim.getTime();
         });
+    }
+
+    private buscarOrganizacaoApta(organizacaoId: string): Organizacao {
+        const organizacao = this.organizacoes.buscarOrganizacao(organizacaoId);
+
+        if (!organizacao.isAtivo()) {
+            throw new Error(`A organização "${organizacao.getId()}" está desativada e não pode registrar lotes.`);
+        }
+
+        const contrato = organizacao.getContratoVigente();
+
+        if (contrato === null || !contrato.estaVigente()) {
+            throw new Error(
+                `A organização "${organizacao.getId()}" não possui contrato vigente. ` +
+                `Um operador de cadastro ou administrador precisa usar as opções "Cadastrar contrato" ou "Renovar contrato".`
+            );
+        }
+
+        return organizacao;
+    }
+
+    private recalcularStatus(loteId: string): void {
+        const lote = this.buscarLote(loteId);
+        const equipamentos = lote.getEquipamentos();
+
+        const faltaTriar = equipamentos.some((e) =>
+            e.getStatusRastreamento() === StatusRastreamento.AGUARDANDO_TRIAGEM ||
+            e.getStatusRastreamento() === StatusRastreamento.EM_TRIAGEM
+        );
+
+        if (faltaTriar) {
+            return;
+        }
+
+        let novoStatus: StatusLote;
+
+        if (equipamentos.every((e) => DESTINOS_FINAIS.includes(e.getStatusRastreamento()))) {
+            novoStatus = StatusLote.FINALIZADO;
+        } else if (equipamentos.some((e) => e.getStatusRastreamento() !== StatusRastreamento.AGUARDANDO_DESMONTE)) {
+            novoStatus = StatusLote.ENCAMINHADO;
+        } else {
+            novoStatus = StatusLote.TRIAGEM_CONCLUIDA;
+        }
+
+        if (novoStatus !== lote.getStatusProcessamento()) {
+            lote.alterarStatus(novoStatus);
+            this.repositorio.salvarEntidade(ARQUIVO_LOTES, lote.paraDados());
+        }
     }
 
     private listarTodos(): Lote[] {

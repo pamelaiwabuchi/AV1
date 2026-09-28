@@ -25,8 +25,10 @@ export class ServicoOrganizacao {
             throw new Error("A razão social é obrigatória.");
         }
 
-        if (!this.validadorCNPJ.validar(dados.cnpj)) {
-            throw new Error(this.validadorCNPJ.obterMensagemErro());
+        const problemaCnpj = this.verificarCnpj(dados.cnpj);
+
+        if (problemaCnpj !== null) {
+            throw new Error(problemaCnpj);
         }
 
         if (inscricaoEstadual === "") {
@@ -48,10 +50,6 @@ export class ServicoOrganizacao {
         const cnpj = this.validadorCNPJ.limpar(dados.cnpj);
         const todas = this.listarTodas();
 
-        if (todas.find((o) => o.getCnpj() === cnpj) !== undefined) {
-            throw new Error("Já existe uma organização cadastrada com este CNPJ.");
-        }
-
         const id = "BR" + String(todas.length + 1).padStart(3, "0");
 
         const organizacao = new Organizacao(
@@ -70,6 +68,20 @@ export class ServicoOrganizacao {
         this.repositorio.salvarEntidade(ARQUIVO_ORGANIZACOES, organizacao.paraDados());
 
         return organizacao;
+    }
+
+    verificarCnpj(cnpj: string): string | null {
+        if (!this.validadorCNPJ.validar(cnpj)) {
+            return this.validadorCNPJ.obterMensagemErro();
+        }
+
+        const limpo = this.validadorCNPJ.limpar(cnpj);
+
+        if (this.listarTodas().find((o) => o.getCnpj() === limpo) !== undefined) {
+            return "Já existe uma organização cadastrada com este CNPJ.";
+        }
+
+        return null;
     }
 
     buscarOrganizacao(id: string): Organizacao {

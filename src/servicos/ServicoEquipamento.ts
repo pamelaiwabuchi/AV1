@@ -3,8 +3,16 @@ import { Equipamento } from "../entidades/Equipamento.js";
 import { TipoEquipamento } from "../enums/TipoEquipamento.js";
 import { EstadoFisico } from "../enums/EstadoFisico.js";
 import { StatusRastreamento } from "../enums/StatusRastreamento.js";
+import type { HistoricoCompleto } from "../interfaces/HistoricoCompleto.js";
 
 const ARQUIVO_EQUIPAMENTOS = "equipamentos.json";
+
+export const DESTINOS_FINAIS: StatusRastreamento[] = [
+    StatusRastreamento.PECAS_REAPROVEITADAS,
+    StatusRastreamento.MATERIAL_RECICLAVEL,
+    StatusRastreamento.DESCARTE_SEGURO,
+    StatusRastreamento.BAIXA_DEFINITIVA
+];
 
 export class ServicoEquipamento {
     private readonly repositorio: RepositorioArquivo;
@@ -70,6 +78,48 @@ export class ServicoEquipamento {
         this.salvar(equipamento);
 
         return equipamento;
+    }
+
+    destinosPermitidos(statusAtual: StatusRastreamento): StatusRastreamento[] {
+        if (statusAtual === StatusRastreamento.AGUARDANDO_DESMONTE) {
+            return [StatusRastreamento.EM_DESMONTE, ...DESTINOS_FINAIS];
+        }
+
+        if (statusAtual === StatusRastreamento.EM_DESMONTE) {
+            return DESTINOS_FINAIS;
+        }
+
+        return [];
+    }
+
+    movimentarEquipamento(codigo: string, novoStatus: StatusRastreamento, justificativa: string, responsavel: string): Equipamento {
+        const equipamento = this.buscarEquipamento(codigo);
+        const permitidos = this.destinosPermitidos(equipamento.getStatusRastreamento());
+
+        if (!permitidos.includes(novoStatus)) {
+            throw new Error(
+                `O equipamento ${equipamento.getCodigoBarrasInterno()} está em ${equipamento.getStatusRastreamento()} ` +
+                `e não pode ir para ${novoStatus}.`
+            );
+        }
+
+        if (justificativa.trim() === "") {
+            throw new Error("A justificativa é obrigatória para movimentar o equipamento.");
+        }
+
+        equipamento.atualizarStatus(novoStatus, justificativa.trim(), responsavel);
+        this.salvar(equipamento);
+
+        return equipamento;
+    }
+
+    rastrearEquipamento(id: string): HistoricoCompleto {
+        const equipamento = this.buscarEquipamento(id);
+
+        return {
+            equipamento: equipamento,
+            movimentacoes: equipamento.getHistoricoMovimentacao()
+        };
     }
 
     gerarCodigoBarras(tipo: TipoEquipamento, sequencia: number): string {

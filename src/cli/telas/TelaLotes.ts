@@ -2,9 +2,21 @@ import type { Interface } from "node:readline/promises";
 import { ServicoLote } from "../../servicos/ServicoLote.js";
 import { ServicoEquipamento } from "../../servicos/ServicoEquipamento.js";
 import { Equipamento } from "../../entidades/Equipamento.js";
+import { StatusRastreamento } from "../../enums/StatusRastreamento.js";
 import { TipoEquipamento } from "../../enums/TipoEquipamento.js";
 import { EstadoFisico } from "../../enums/EstadoFisico.js";
 import { converterData, converterValor, formatarData } from "../conversores.js";
+import {
+    dataValida,
+    escolherOpcao,
+    mensagemDeErro,
+    mostrarComoCancelar,
+    naoVazio,
+    perguntarDataEntrada,
+    perguntarSimOuNao,
+    perguntarValido
+} from "../perguntas.js";
+import { sucesso, aviso, erro } from "../mensagens.js";
 
 export class TelaLotes {
     private lote: ServicoLote;
@@ -17,19 +29,62 @@ export class TelaLotes {
         this.terminal = terminal;
     }
 
-    async registrar(): Promise<void> {
-        const organizacaoId = await this.terminal.question("Código da organização (ex.: BR001): ");
-        const notaFiscal = await this.terminal.question("Nota fiscal: ");
-        const transportadora = await this.terminal.question("Transportadora: ");
+    async registrar(parametros: Record<string, string> = {}): Promise<void> {
+        mostrarComoCancelar();
 
-        const dataEntrada = converterData(await this.terminal.question(`Data de entrada (dd/mm/aaaa, ex.: ${formatarData(new Date())}): `));
-
-        if (dataEntrada === null) {
-            console.log("Data de entrada inválida. Use o formato dd/mm/aaaa.");
+        const organizacaoId = await perguntarValido(
+            this.terminal,
+            "Código da organização (ex.: BR001): ",
+            (texto) => this.lote.verificarOrganizacao(texto),
+            true,
+            parametros["org"]
+        );
+        if (organizacaoId === null) {
+            aviso("Registro de lote cancelado.");
             return;
         }
 
-        const observacoes = await this.terminal.question("Observações (opcional, Enter para pular): ");
+        const notaFiscal = await perguntarValido(
+            this.terminal,
+            "Nota fiscal: ",
+            (texto) => this.lote.verificarNotaFiscal(organizacaoId, texto),
+            true,
+            parametros["nf"]
+        );
+        if (notaFiscal === null) {
+            aviso("Registro de lote cancelado.");
+            return;
+        }
+
+        const transportadora = await perguntarValido(
+            this.terminal,
+            "Transportadora: ",
+            naoVazio("A transportadora é obrigatória."),
+            true,
+            parametros["transp"]
+        );
+        if (transportadora === null) {
+            aviso("Registro de lote cancelado.");
+            return;
+        }
+
+        const dataEntrada = await perguntarDataEntrada(this.terminal, parametros["data"]);
+        if (dataEntrada === null) {
+            aviso("Registro de lote cancelado.");
+            return;
+        }
+
+        const observacoes = await perguntarValido(
+            this.terminal,
+            "Observações (opcional, Enter para pular): ",
+            () => null,
+            true,
+            parametros["obs"]
+        );
+        if (observacoes === null) {
+            aviso("Registro de lote cancelado.");
+            return;
+        }
 
         try {
             const novo = this.lote.criarLote({
@@ -40,79 +95,105 @@ export class TelaLotes {
                 observacoes
             });
 
-            console.log(`Lote ${novo.getId()} registrado com status ${novo.getStatusProcessamento()}.`);
-        } catch (erro) {
-            console.log((erro as Error).message);
+            sucesso(`Lote ${novo.getId()} registrado com status ${novo.getStatusProcessamento()}.`);
+        } catch (e) {
+            erro((e as Error).message);
         }
     }
 
-    async consultarPorPeriodo(): Promise<void> {
-        const dataInicio = converterData(await this.terminal.question("Data inicial (dd/mm/aaaa): "));
+    async consultarPorPeriodo(parametros: Record<string, string> = {}): Promise<void> {
+        const periodo = await this.perguntarPeriodo(parametros);
 
-        if (dataInicio === null) {
-            console.log("Data inicial inválida. Use o formato dd/mm/aaaa.");
+        if (periodo === null) {
+            aviso("Consulta cancelada.");
             return;
         }
 
-        const dataFim = converterData(await this.terminal.question("Data final (dd/mm/aaaa): "));
+        const lotes = this.lote.consultarLotePorPeriodo(periodo.inicio, periodo.fim);
 
-        if (dataFim === null) {
-            console.log("Data final inválida. Use o formato dd/mm/aaaa.");
+        if (lotes.length === 0) {
+            aviso("Nenhum lote encontrado no período.");
             return;
         }
 
-        try {
-            const lotes = this.lote.consultarLotePorPeriodo(dataInicio, dataFim);
+        console.log(`Lotes entre ${formatarData(periodo.inicio)} e ${formatarData(periodo.fim)}:`);
 
-            if (lotes.length === 0) {
-                console.log("Nenhum lote encontrado no período.");
-                return;
+        for (const lote of lotes) {
+            console.log(`  ${lote.getId()} - ${lote.getOrganizacaoId()} - NF ${lote.getNotaFiscal()} - ${lote.getTransportadora()} - entrada ${formatarData(lote.getDataEntrada())} - ${lote.getStatusProcessamento()}`);
+
+            if (lote.getObservacoes() !== "") {
+                console.log(`      Observações: ${lote.getObservacoes()}`);
             }
-
-            console.log(`Lotes entre ${formatarData(dataInicio)} e ${formatarData(dataFim)}:`);
-
-            for (const lote of lotes) {
-                console.log(`  ${lote.getId()} - ${lote.getOrganizacaoId()} - NF ${lote.getNotaFiscal()} - ${lote.getTransportadora()} - entrada ${formatarData(lote.getDataEntrada())} - ${lote.getStatusProcessamento()}`);
-
-                if (lote.getObservacoes() !== "") {
-                    console.log(`      Observações: ${lote.getObservacoes()}`);
-                }
-            }
-        } catch (erro) {
-            console.log((erro as Error).message);
         }
     }
 
-    async adicionarEquipamentos(responsavel: string): Promise<void> {
-        const loteId = await this.terminal.question("Código do lote (ex.: LT001): ");
+    async adicionarEquipamentos(responsavel: string, parametros: Record<string, string> = {}): Promise<void> {
+        mostrarComoCancelar();
 
-        try {
-            this.lote.buscarLote(loteId);
-        } catch (erro) {
-            console.log((erro as Error).message);
+        const loteId = await perguntarValido(
+            this.terminal,
+            "Código do lote (ex.: LT001): ",
+            (texto) => this.lote.verificarLoteAceitaEquipamentos(texto),
+            true,
+            parametros["lote"]
+        );
+        if (loteId === null) {
+            aviso("Cadastro de equipamento cancelado.");
             return;
         }
+
+        const anoAtual = new Date().getFullYear();
 
         while (true) {
-            const tipo = (await this.escolherOpcao("Tipo do equipamento:", Object.values(TipoEquipamento))) as TipoEquipamento | null;
-
+            const tipo = (await escolherOpcao(this.terminal, "Tipo do equipamento", Object.values(TipoEquipamento))) as TipoEquipamento | null;
             if (tipo === null) {
+                aviso("Cadastro de equipamento cancelado.");
                 return;
             }
 
-            const marca = await this.terminal.question("Marca: ");
-            const modelo = await this.terminal.question("Modelo: ");
-            const anoFabricacao = Number((await this.terminal.question("Ano de fabricação (ex.: 2019): ")).trim());
-            const peso = converterValor(await this.terminal.question("Peso em kg (ex.: 2,5): "));
-
-            if (peso === null) {
-                console.log("Peso inválido. Use números, com vírgula para as casas decimais.");
+            const marca = await perguntarValido(this.terminal, "Marca: ", naoVazio("A marca é obrigatória."), true);
+            if (marca === null) {
+                aviso("Cadastro de equipamento cancelado.");
                 return;
             }
 
-            const estadoDeclarado = (await this.escolherOpcao("Estado físico declarado:", Object.values(EstadoFisico))) as EstadoFisico | null;
+            const modelo = await perguntarValido(this.terminal, "Modelo: ", naoVazio("O modelo é obrigatório."), true);
+            if (modelo === null) {
+                aviso("Cadastro de equipamento cancelado.");
+                return;
+            }
 
+            const textoAno = await perguntarValido(this.terminal, "Ano de fabricação (ex.: 2019): ", (texto) => {
+                const ano = Number(texto);
+
+                if (!Number.isInteger(ano) || texto === "" || ano > anoAtual) {
+                    return `O ano precisa ser um número inteiro e não pode ser maior que ${anoAtual}.`;
+                }
+
+                return null;
+            }, true);
+            if (textoAno === null) {
+                aviso("Cadastro de equipamento cancelado.");
+                return;
+            }
+
+            const textoPeso = await perguntarValido(this.terminal, "Peso em kg (ex.: 2,5): ", (texto) => {
+                const peso = converterValor(texto);
+
+                if (peso === null || peso <= 0) {
+                    return "O peso precisa ser um número maior que zero, com vírgula para as casas decimais.";
+                }
+
+                return null;
+            }, true);
+            if (textoPeso === null) {
+                aviso("Cadastro de equipamento cancelado.");
+                return;
+            }
+
+            const estadoDeclarado = (await escolherOpcao(this.terminal, "Estado físico declarado", Object.values(EstadoFisico))) as EstadoFisico | null;
             if (estadoDeclarado === null) {
+                aviso("Cadastro de equipamento cancelado.");
                 return;
             }
 
@@ -121,54 +202,86 @@ export class TelaLotes {
                     tipo,
                     marca,
                     modelo,
-                    anoFabricacao,
-                    pesoQuilogramas: peso,
+                    anoFabricacao: Number(textoAno),
+                    pesoQuilogramas: converterValor(textoPeso) as number,
                     estadoFisico: estadoDeclarado
                 }, responsavel);
 
-                console.log(`Equipamento adicionado. Código de barras: ${novo.getCodigoBarrasInterno()} (posição ${novo.getPosicaoNoLote()} no lote).`);
-            } catch (erro) {
-                console.log((erro as Error).message);
+                sucesso(`Equipamento adicionado. Código de barras: ${novo.getCodigoBarrasInterno()} (posição ${novo.getPosicaoNoLote()} no lote).`);
+            } catch (e) {
+                erro((e as Error).message);
                 return;
             }
 
-            const continuar = await this.terminal.question("Adicionar outro equipamento a este lote? (S/N): ");
+            const continuar = await perguntarSimOuNao(this.terminal, "Adicionar outro equipamento a este lote? (S/N): ");
 
-            if (continuar.trim().toUpperCase() !== "S") {
+            if (continuar !== true) {
                 return;
             }
         }
     }
 
-    async iniciarTriagem(responsavel: string): Promise<void> {
-        const loteId = await this.terminal.question("Código do lote (ex.: LT001): ");
+    async iniciarTriagem(responsavel: string, parametros: Record<string, string> = {}): Promise<void> {
+        const loteId = await perguntarValido(
+            this.terminal,
+            "Código do lote (ex.: LT001): ",
+            (texto) => mensagemDeErro(() => this.lote.buscarLote(texto)),
+            true,
+            parametros["lote"]
+        );
+
+        if (loteId === null) {
+            aviso("Início da triagem cancelado.");
+            return;
+        }
 
         try {
             this.lote.processarTriagem(loteId, responsavel);
-            console.log(`Triagem do lote ${loteId.trim().toUpperCase()} iniciada.`);
-        } catch (erro) {
-            console.log((erro as Error).message);
+            sucesso(`Triagem do lote ${loteId.toUpperCase()} iniciada.`);
+        } catch (e) {
+            erro((e as Error).message);
         }
     }
 
-    async avaliarEquipamento(responsavel: string): Promise<void> {
-        const codigo = await this.terminal.question("Código de barras do equipamento (ex.: NOT-000001): ");
+    async avaliarEquipamento(responsavel: string, parametros: Record<string, string> = {}): Promise<void> {
+        mostrarComoCancelar();
 
-        let equipamento: Equipamento;
+        const codigo = await perguntarValido(
+            this.terminal,
+            "Código de barras do equipamento (ex.: NOT-000001): ",
+            (texto) => {
+                const problema = mensagemDeErro(() => this.equipamento.buscarEquipamento(texto));
 
-        try {
-            equipamento = this.equipamento.buscarEquipamento(codigo);
-        } catch (erro) {
-            console.log((erro as Error).message);
+                if (problema !== null) {
+                    return problema;
+                }
+
+                const status = this.equipamento.buscarEquipamento(texto).getStatusRastreamento();
+
+                if (status !== StatusRastreamento.EM_TRIAGEM) {
+                    return `Este equipamento não está em triagem (status: ${status}).`;
+                }
+
+                return null;
+            },
+            true,
+            parametros["codigo"]
+        );
+
+        if (codigo === null) {
+            aviso("Avaliação cancelada.");
             return;
         }
+
+        const equipamento = this.equipamento.buscarEquipamento(codigo);
 
         console.log(`${equipamento.getCodigoBarrasInterno()} - ${equipamento.getTipo()} ${equipamento.getMarca()} ${equipamento.getModelo()}`);
         console.log(`Estado físico atual: ${equipamento.getEstadoFisico()} | Status: ${equipamento.getStatusRastreamento()}`);
 
-        const novoEstado = (await this.escolherOpcao("Estado físico avaliado:", Object.values(EstadoFisico))) as EstadoFisico | null;
+        const novoEstado = (await escolherOpcao(this.terminal, "Estado físico avaliado", Object.values(EstadoFisico))) as EstadoFisico | null;
 
         if (novoEstado === null) {
+            aviso("Avaliação cancelada.");
             return;
         }
 
@@ -177,45 +290,74 @@ export class TelaLotes {
 
         if (perdidas >= 2) {
             console.log(`O estado caiu ${perdidas} categorias. A justificativa é obrigatória.`);
-            justificativa = await this.terminal.question("Justificativa: ");
+
+            const texto = await perguntarValido(this.terminal, "Justificativa: ", naoVazio("A justificativa é obrigatória."), true);
+
+            if (texto === null) {
+                aviso("Avaliação cancelada.");
+                return;
+            }
+
+            justificativa = texto;
         }
 
         try {
             const avaliado = this.lote.avaliarEquipamento(equipamento.getId(), novoEstado, justificativa, responsavel);
-            console.log(`Equipamento avaliado como ${avaliado.getEstadoFisico()}. Status: ${avaliado.getStatusRastreamento()}.`);
-
             const lote = this.lote.buscarLote(avaliado.getLoteId());
-            console.log(`Lote ${lote.getId()}: ${lote.getStatusProcessamento()}.`);
-        } catch (erro) {
-            console.log((erro as Error).message);
+
+            sucesso(
+                `Equipamento avaliado como ${avaliado.getEstadoFisico()}. Status: ${avaliado.getStatusRastreamento()}. ` +
+                `Lote ${lote.getId()}: ${lote.getStatusProcessamento()}.`
+            );
+        } catch (e) {
+            erro((e as Error).message);
         }
     }
 
-    async relatorioTriagem(): Promise<void> {
-        const loteId = await this.terminal.question("Código do lote (ex.: LT001): ");
+    async relatorioTriagem(parametros: Record<string, string> = {}): Promise<void> {
+        const loteId = await perguntarValido(
+            this.terminal,
+            "Código do lote (ex.: LT001): ",
+            (texto) => mensagemDeErro(() => this.lote.buscarLote(texto)),
+            true,
+            parametros["lote"]
+        );
 
-        try {
-            console.log(this.lote.buscarLote(loteId).gerarRelatorioTriagem());
-        } catch (erro) {
-            console.log((erro as Error).message);
+        if (loteId === null) {
+            aviso("Relatório cancelado.");
+            return;
         }
+
+        console.log(this.lote.buscarLote(loteId).gerarRelatorioTriagem());
     }
 
-    private async escolherOpcao(titulo: string, opcoes: string[]): Promise<string | null> {
-        console.log(titulo);
+    private async perguntarPeriodo(parametros: Record<string, string>): Promise<{ inicio: Date; fim: Date } | null> {
+        const textoInicio = await perguntarValido(this.terminal, "Data inicial (dd/mm/aaaa): ", dataValida, true, parametros["inicio"]);
 
-        opcoes.forEach((opcao, i) => {
-            console.log(`  ${i + 1} - ${opcao}`);
-        });
-
-        const escolha = await this.terminal.question("Opção: ");
-        const escolhida = opcoes[Number(escolha) - 1];
-
-        if (escolhida === undefined) {
-            console.log(`Opção inválida. Digite um número de 1 a ${opcoes.length}.`);
+        if (textoInicio === null) {
             return null;
         }
 
-        return escolhida;
+        const inicio = converterData(textoInicio) as Date;
+
+        const textoFim = await perguntarValido(this.terminal, "Data final (dd/mm/aaaa): ", (texto) => {
+            const fim = converterData(texto);
+
+            if (fim === null) {
+                return "Data inválida. Use o formato dd/mm/aaaa.";
+            }
+
+            if (fim.getTime() < inicio.getTime()) {
+                return "A data final precisa ser igual ou posterior à data inicial.";
+            }
+
+            return null;
+        }, true, parametros["fim"]);
+
+        if (textoFim === null) {
+            return null;
+        }
+
+        return { inicio: inicio, fim: converterData(textoFim) as Date };
     }
 }

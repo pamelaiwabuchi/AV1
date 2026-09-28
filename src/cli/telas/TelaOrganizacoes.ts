@@ -2,6 +2,8 @@ import type { Interface } from "node:readline/promises";
 import { ServicoOrganizacao } from "../../servicos/ServicoOrganizacao.js";
 import { Organizacao } from "../../entidades/Organizacao.js";
 import { converterData, converterValor, formatarData, formatarValor } from "../conversores.js";
+import { dataValida, ehCancelamento, mensagemDeErro, mostrarComoCancelar, naoVazio, perguntarSimOuNao, perguntarValido } from "../perguntas.js";
+import { sucesso, aviso, erro } from "../mensagens.js";
 
 export class TelaOrganizacoes {
     private organizacao: ServicoOrganizacao;
@@ -13,12 +15,43 @@ export class TelaOrganizacoes {
     }
 
     async cadastrar(): Promise<void> {
-        const razaoSocial = await this.terminal.question("Razão social: ");
-        const cnpj = await this.terminal.question("CNPJ: ");
-        const inscricaoEstadual = await this.terminal.question("Inscrição estadual: ");
-        const enderecoCompleto = await this.terminal.question("Endereço completo: ");
-        const telefone = await this.terminal.question("Telefone: ");
-        const email = await this.terminal.question("E-mail: ");
+        mostrarComoCancelar();
+
+        const razaoSocial = await perguntarValido(this.terminal, "Razão social: ", naoVazio("A razão social é obrigatória."), true);
+        if (razaoSocial === null) {
+            aviso("Cadastro de organização cancelado.");
+            return;
+        }
+
+        const cnpj = await perguntarValido(this.terminal, "CNPJ: ", (texto) => this.organizacao.verificarCnpj(texto), true);
+        if (cnpj === null) {
+            aviso("Cadastro de organização cancelado.");
+            return;
+        }
+
+        const inscricaoEstadual = await perguntarValido(this.terminal, "Inscrição estadual: ", naoVazio("A inscrição estadual é obrigatória."), true);
+        if (inscricaoEstadual === null) {
+            aviso("Cadastro de organização cancelado.");
+            return;
+        }
+
+        const enderecoCompleto = await perguntarValido(this.terminal, "Endereço completo: ", naoVazio("O endereço completo é obrigatório."), true);
+        if (enderecoCompleto === null) {
+            aviso("Cadastro de organização cancelado.");
+            return;
+        }
+
+        const telefone = await perguntarValido(this.terminal, "Telefone: ", naoVazio("O telefone é obrigatório."), true);
+        if (telefone === null) {
+            aviso("Cadastro de organização cancelado.");
+            return;
+        }
+
+        const email = await perguntarValido(this.terminal, "E-mail: ", naoVazio("O e-mail é obrigatório."), true);
+        if (email === null) {
+            aviso("Cadastro de organização cancelado.");
+            return;
+        }
 
         try {
             const nova = this.organizacao.cadastrarOrganizacao({
@@ -30,9 +63,9 @@ export class TelaOrganizacoes {
                 email
             });
 
-            console.log(`Organização cadastrada com o código ${nova.getId()}.`);
-        } catch (erro) {
-            console.log((erro as Error).message);
+            sucesso(`Organização cadastrada com o código ${nova.getId()}.`);
+        } catch (e) {
+            erro((e as Error).message);
         }
     }
 
@@ -40,7 +73,7 @@ export class TelaOrganizacoes {
         const organizacoes = this.organizacao.listarOrganizacoesAtivas();
 
         if (organizacoes.length === 0) {
-            console.log("Nenhuma organização cadastrada.");
+            aviso("Nenhuma organização cadastrada.");
             return;
         }
 
@@ -51,10 +84,13 @@ export class TelaOrganizacoes {
         }
     }
 
-    async cadastrarContrato(): Promise<void> {
-        const organizacao = await this.perguntarOrganizacao();
+    async cadastrarContrato(parametros: Record<string, string> = {}): Promise<void> {
+        mostrarComoCancelar();
+
+        const organizacao = await this.perguntarOrganizacao(parametros);
 
         if (organizacao === null) {
+            aviso("Cadastro de contrato cancelado.");
             return;
         }
 
@@ -62,27 +98,39 @@ export class TelaOrganizacoes {
 
         if (contratoAtual !== null) {
             console.log(`Esta organização já possui o contrato ${contratoAtual.getId()} (vencimento: ${formatarData(contratoAtual.getDataVencimento())}).`);
-            const resposta = await this.terminal.question("Este contrato substituirá o atual. Deseja prosseguir com a mudança? (S/N): ");
+            const prosseguir = await perguntarSimOuNao(this.terminal, "Este contrato substituirá o atual. Deseja prosseguir com a mudança? (S/N): ");
 
-            if (resposta.trim().toUpperCase() !== "S") {
-                console.log("Operação cancelada. O contrato atual foi mantido.");
+            if (prosseguir !== true) {
+                aviso("Operação cancelada. O contrato atual foi mantido.");
                 return;
             }
         }
 
-        const dataAssinatura = converterData(await this.terminal.question("Data de assinatura (dd/mm/aaaa): "));
-
-        if (dataAssinatura === null) {
-            console.log("Data de assinatura inválida. Use o formato dd/mm/aaaa.");
+        const textoAssinatura = await perguntarValido(this.terminal, "Data de assinatura (dd/mm/aaaa): ", dataValida, true);
+        if (textoAssinatura === null) {
+            aviso("Cadastro de contrato cancelado.");
             return;
         }
+        const dataAssinatura = converterData(textoAssinatura) as Date;
 
-        const dataVencimento = converterData(await this.terminal.question("Data de vencimento (dd/mm/aaaa): "));
+        const textoVencimento = await perguntarValido(this.terminal, "Data de vencimento (dd/mm/aaaa): ", (texto) => {
+            const vencimento = converterData(texto);
 
-        if (dataVencimento === null) {
-            console.log("Data de vencimento inválida. Use o formato dd/mm/aaaa.");
+            if (vencimento === null) {
+                return "Data inválida. Use o formato dd/mm/aaaa.";
+            }
+
+            if (vencimento.getTime() <= dataAssinatura.getTime()) {
+                return "A data de vencimento precisa ser depois da data de assinatura.";
+            }
+
+            return null;
+        }, true);
+        if (textoVencimento === null) {
+            aviso("Cadastro de contrato cancelado.");
             return;
         }
+        const dataVencimento = converterData(textoVencimento) as Date;
 
         console.log("Digite as cláusulas do contrato, uma por linha.");
         console.log("Quando terminar, aperte Enter numa linha vazia.");
@@ -92,29 +140,39 @@ export class TelaOrganizacoes {
         while (true) {
             const clausula = (await this.terminal.question(`  Cláusula ${clausulas.length + 1}: `)).trim();
 
-            if (clausula === "") {
+            if (ehCancelamento(clausula, true)) {
+                aviso("Cadastro de contrato cancelado.");
+                return;
+            }
+
+            if (clausula !== "") {
+                clausulas.push(clausula);
+                continue;
+            }
+
+            if (clausulas.length > 0) {
                 break;
             }
 
-            clausulas.push(clausula);
+            erro("O contrato precisa ter pelo menos uma cláusula.");
         }
 
-        if (clausulas.length === 0) {
-            console.log("O contrato precisa ter pelo menos uma cláusula.");
+        const textoValor = await perguntarValido(this.terminal, "Valor mensal (ex.: 1500,00): ", (texto) => {
+            if (converterValor(texto) === null) {
+                return "Valor mensal inválido. Use números, com vírgula para os centavos.";
+            }
+
+            return null;
+        }, false);
+        if (textoValor === null) {
+            aviso("Cadastro de contrato cancelado.");
             return;
         }
+        const valorMensal = converterValor(textoValor) as number;
 
-        const valorMensal = converterValor(await this.terminal.question("Valor mensal (ex.: 1500,00): "));
-
-        if (valorMensal === null) {
-            console.log("Valor mensal inválido. Use números, com vírgula para os centavos.");
-            return;
-        }
-
-        const respostaRenovacao = (await this.terminal.question("Renovação automática? (S/N): ")).trim().toUpperCase();
-
-        if (respostaRenovacao !== "S" && respostaRenovacao !== "N") {
-            console.log("Resposta inválida. Digite S ou N.");
+        const renovacaoAutomatica = await perguntarSimOuNao(this.terminal, "Renovação automática? (S/N): ");
+        if (renovacaoAutomatica === null) {
+            aviso("Cadastro de contrato cancelado.");
             return;
         }
 
@@ -124,57 +182,75 @@ export class TelaOrganizacoes {
                 dataVencimento,
                 clausulas,
                 valorMensal,
-                renovacaoAutomatica: respostaRenovacao === "S"
+                renovacaoAutomatica
             });
 
-            console.log(`Contrato ${contrato.getId()} registrado para a organização ${organizacao.getId()}.`);
-        } catch (erro) {
-            console.log((erro as Error).message);
+            sucesso(`Contrato ${contrato.getId()} registrado para a organização ${organizacao.getId()}.`);
+        } catch (e) {
+            erro((e as Error).message);
         }
     }
 
-    async renovarContrato(): Promise<void> {
-        const organizacao = await this.perguntarOrganizacao();
+    async renovarContrato(parametros: Record<string, string> = {}): Promise<void> {
+        mostrarComoCancelar();
+
+        const organizacao = await this.perguntarOrganizacao(parametros);
 
         if (organizacao === null) {
+            aviso("Renovação cancelada.");
             return;
         }
 
         const contrato = organizacao.getContratoVigente();
 
         if (contrato === null) {
-            console.log(`A organização ${organizacao.getId()} não possui contrato.`);
+            aviso(`A organização ${organizacao.getId()} não possui contrato.`);
             return;
         }
 
         console.log(`Contrato ${contrato.getId()} - vencimento atual: ${formatarData(contrato.getDataVencimento())}`);
 
-        const novoVencimento = converterData(await this.terminal.question("Novo vencimento (dd/mm/aaaa): "));
+        const textoNovo = await perguntarValido(this.terminal, "Novo vencimento (dd/mm/aaaa): ", (texto) => {
+            const novo = converterData(texto);
 
-        if (novoVencimento === null) {
-            console.log("Data inválida. Use o formato dd/mm/aaaa.");
+            if (novo === null) {
+                return "Data inválida. Use o formato dd/mm/aaaa.";
+            }
+
+            if (novo.getTime() <= contrato.getDataVencimento().getTime()) {
+                return "O novo vencimento precisa ser depois do vencimento atual.";
+            }
+
+            return null;
+        }, true);
+
+        if (textoNovo === null) {
+            aviso("Renovação cancelada.");
             return;
         }
 
+        const novoVencimento = converterData(textoNovo) as Date;
+
         try {
             this.organizacao.renovarContrato(organizacao.getId(), novoVencimento);
-            console.log(`Contrato renovado até ${formatarData(novoVencimento)}.`);
-        } catch (erro) {
-            console.log((erro as Error).message);
+            sucesso(`Contrato renovado até ${formatarData(novoVencimento)}.`);
+        } catch (e) {
+            erro((e as Error).message);
         }
     }
 
-    async consultarContrato(): Promise<void> {
-        const organizacao = await this.perguntarOrganizacao();
+    async consultarContrato(parametros: Record<string, string> = {}): Promise<void> {
+        const organizacao = await this.perguntarOrganizacao(parametros);
 
         if (organizacao === null) {
+            aviso("Consulta cancelada.");
             return;
         }
 
         const contrato = organizacao.getContratoVigente();
 
         if (contrato === null) {
-            console.log(`A organização ${organizacao.getId()} não possui contrato.`);
+            aviso(`A organização ${organizacao.getId()} não possui contrato.`);
             return;
         }
 
@@ -191,14 +267,19 @@ export class TelaOrganizacoes {
         });
     }
 
-    private async perguntarOrganizacao(): Promise<Organizacao | null> {
-        const codigo = await this.terminal.question("Código da organização (ex.: BR001): ");
+    private async perguntarOrganizacao(parametros: Record<string, string>): Promise<Organizacao | null> {
+        const codigo = await perguntarValido(
+            this.terminal,
+            "Código da organização (ex.: BR001): ",
+            (texto) => mensagemDeErro(() => this.organizacao.buscarOrganizacao(texto)),
+            true,
+            parametros["org"]
+        );
 
-        try {
-            return this.organizacao.buscarOrganizacao(codigo);
-        } catch (erro) {
-            console.log((erro as Error).message);
+        if (codigo === null) {
             return null;
         }
+
+        return this.organizacao.buscarOrganizacao(codigo);
     }
 }

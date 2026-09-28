@@ -1,58 +1,67 @@
 import type { Interface } from "node:readline/promises";
 import { ServicoAutenticacao } from "../../servicos/ServicoAutenticacao.js";
 import { PapelUsuario } from "../../enums/PapelUsuario.js";
+import { HistoricoComandos } from "../HistoricoComandos.js";
+import { escolherOpcao, mostrarComoCancelar, perguntarValido } from "../perguntas.js";
+import { sucesso, aviso, erro } from "../mensagens.js";
 
 export class TelaUsuarios {
     private autenticacao: ServicoAutenticacao;
     private terminal: Interface;
+    private historico: HistoricoComandos;
 
-    constructor(autenticacao: ServicoAutenticacao, terminal: Interface) {
+    constructor(autenticacao: ServicoAutenticacao, terminal: Interface, historico: HistoricoComandos) {
         this.autenticacao = autenticacao;
         this.terminal = terminal;
+        this.historico = historico;
     }
 
     async cadastrar(): Promise<void> {
-        const nome = (await this.terminal.question("Nome do novo usuário: ")).trim().toLowerCase();
+        mostrarComoCancelar();
 
-        if (nome === "") {
-            console.log("O nome não pode ficar vazio.");
+        const nomeDigitado = await perguntarValido(this.terminal, "Nome do novo usuário: ", (texto) => {
+            if (texto === "") {
+                return "O nome não pode ficar vazio.";
+            }
+
+            const jaExiste = this.autenticacao.listarUsuarios().find((c) => c.getUsuario() === texto.toLowerCase());
+
+            if (jaExiste !== undefined) {
+                return `Já existe um usuário chamado "${texto.toLowerCase()}".`;
+            }
+
+            return null;
+        }, true);
+
+        if (nomeDigitado === null) {
+            aviso("Cadastro de usuário cancelado.");
             return;
         }
 
-        const jaExiste = this.autenticacao.listarUsuarios().find((c) => c.getUsuario() === nome);
+        const nome = nomeDigitado.toLowerCase();
 
-        if (jaExiste !== undefined) {
-            console.log(`Já existe um usuário chamado "${nome}".`);
-            return;
+        let senha = "";
+
+        while (senha.trim() === "") {
+            senha = await this.historico.perguntarSenha(this.terminal, "Senha: ");
+
+            if (senha.trim() === "") {
+                erro("A senha não pode ficar vazia.");
+            }
         }
 
-        const senha = await this.terminal.question("Senha: ");
+        const papelEscolhido = (await escolherOpcao(this.terminal, "Escolha o papel", Object.values(PapelUsuario))) as PapelUsuario | null;
 
-        if (senha.trim() === "") {
-            console.log("A senha não pode ficar vazia.");
-            return;
-        }
-
-        const papeis = Object.values(PapelUsuario);
-
-        console.log("Escolha o papel:");
-        papeis.forEach((papel, i) => {
-            console.log(`  ${i + 1} - ${papel}`);
-        });
-
-        const opcao = await this.terminal.question("Opção: ");
-        const papelEscolhido = papeis[Number(opcao) - 1];
-
-        if (papelEscolhido === undefined) {
-            console.log(`Opção inválida. Digite um número de 1 a ${papeis.length}.`);
+        if (papelEscolhido === null) {
+            aviso("Cadastro de usuário cancelado.");
             return;
         }
 
         try {
             this.autenticacao.cadastrarUsuario(nome, senha, papelEscolhido);
-            console.log(`Usuário "${nome}" cadastrado como ${papelEscolhido}.`);
-        } catch (erro) {
-            console.log((erro as Error).message);
+            sucesso(`Usuário "${nome}" cadastrado como ${papelEscolhido}.`);
+        } catch (e) {
+            erro((e as Error).message);
         }
     }
 
@@ -66,26 +75,26 @@ export class TelaUsuarios {
     }
 
     async alterarSenha(usuario: string): Promise<void> {
-        const senhaAtual = await this.terminal.question("Senha atual: ");
-        const senhaNova = await this.terminal.question("Nova senha: ");
-        const confirmacao = await this.terminal.question("Confirme a nova senha: ");
+        const senhaAtual = await this.historico.perguntarSenha(this.terminal, "Senha atual: ");
+        const senhaNova = await this.historico.perguntarSenha(this.terminal, "Nova senha: ");
+        const confirmacao = await this.historico.perguntarSenha(this.terminal, "Confirme a nova senha: ");
 
         if (senhaNova.trim() === "") {
-            console.log("A nova senha não pode ficar vazia.");
+            erro("A nova senha não pode ficar vazia.");
             return;
         }
 
         if (senhaNova !== confirmacao) {
-            console.log("As senhas novas não conferem.");
+            erro("As senhas novas não conferem.");
             return;
         }
 
         const alterou = this.autenticacao.alterarSenha(usuario, senhaAtual, senhaNova);
 
         if (alterou) {
-            console.log("Senha alterada com sucesso.");
+            sucesso("Senha alterada com sucesso.");
         } else {
-            console.log("Senha atual incorreta. Nada foi alterado.");
+            erro("Senha atual incorreta. Nada foi alterado.");
         }
     }
 }
