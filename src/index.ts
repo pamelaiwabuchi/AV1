@@ -3,6 +3,7 @@ import { obterChaveMestra, PASTA_DADOS } from "./cli/provisionamento.js";
 import { RepositorioArquivo } from "./persistencia/RepositorioArquivo.js";
 import { ServicoAutenticacao } from "./servicos/ServicoAutenticacao.js";
 import { ServicoOrganizacao } from "./servicos/ServicoOrganizacao.js";
+import { ServicoLote } from "./servicos/ServicoLote.js";
 import { CLIInterface } from "./cli/CLIInterface.js";
 
 const terminal = createInterface({
@@ -15,6 +16,7 @@ const chave = await obterChaveMestra(terminal);
 const repositorio = new RepositorioArquivo(PASTA_DADOS, chave);
 const autenticacao = new ServicoAutenticacao(repositorio);
 const organizacao = new ServicoOrganizacao(repositorio);
+const lote = new ServicoLote(repositorio, organizacao);
 
-const cli = new CLIInterface(autenticacao, organizacao, terminal);
+const cli = new CLIInterface(autenticacao, organizacao, lote, terminal);
 await cli.iniciarLoop();

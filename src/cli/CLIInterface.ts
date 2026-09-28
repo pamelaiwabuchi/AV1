@@ -1,10 +1,12 @@
 import type { Interface } from "node:readline/promises";
 import { ServicoAutenticacao } from "../servicos/ServicoAutenticacao.js";
 import { ServicoOrganizacao } from "../servicos/ServicoOrganizacao.js";
+import { ServicoLote } from "../servicos/ServicoLote.js";
 import { Sessao } from "../entidades/Sessao.js";
 import { PapelUsuario } from "../enums/PapelUsuario.js";
 import { TelaUsuarios } from "./telas/TelaUsuarios.js";
 import { TelaOrganizacoes } from "./telas/TelaOrganizacoes.js";
+import { TelaLotes } from "./telas/TelaLotes.js";
 
 interface OpcaoMenu {
     texto: string;
@@ -15,20 +17,24 @@ interface OpcaoMenu {
 export class CLIInterface {
     private autenticacao: ServicoAutenticacao;
     private organizacao: ServicoOrganizacao;
+    private lote: ServicoLote;
     private sessaoAtual: Sessao | null;
     private terminal: Interface;
     private telaUsuarios: TelaUsuarios;
     private telaOrganizacoes: TelaOrganizacoes;
+    private telaLotes: TelaLotes;
     private opcoes: OpcaoMenu[];
 
-    constructor(autenticacao: ServicoAutenticacao, organizacao: ServicoOrganizacao, terminal: Interface) {
+    constructor(autenticacao: ServicoAutenticacao, organizacao: ServicoOrganizacao, lote: ServicoLote, terminal: Interface) {
         this.autenticacao = autenticacao;
         this.organizacao = organizacao;
+        this.lote = lote;
         this.sessaoAtual = null;
         this.terminal = terminal;
 
         this.telaUsuarios = new TelaUsuarios(this.autenticacao, this.terminal);
         this.telaOrganizacoes = new TelaOrganizacoes(this.organizacao, this.terminal);
+        this.telaLotes = new TelaLotes(this.lote, this.terminal);
 
         this.opcoes = [
             {
@@ -70,6 +76,16 @@ export class CLIInterface {
                 texto: "Consultar contrato",
                 papeisPermitidos: Object.values(PapelUsuario),
                 executar: () => this.telaOrganizacoes.consultarContrato()
+            },
+            {
+                texto: "Registrar lote",
+                papeisPermitidos: [PapelUsuario.ADMINISTRADOR, PapelUsuario.GESTOR_ALMOXARIFADO],
+                executar: () => this.telaLotes.registrar()
+            },
+            {
+                texto: "Consultar lotes por período",
+                papeisPermitidos: Object.values(PapelUsuario),
+                executar: () => this.telaLotes.consultarPorPeriodo()
             }
         ];
     }
