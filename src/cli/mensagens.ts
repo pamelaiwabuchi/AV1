@@ -1,5 +1,7 @@
 const LINHA = "─".repeat(60);
 
+export const ASSINATURA = "Maniçoba: quem já provou é mais feliz";
+
 function mostrar(nivel: string, texto: string): void {
     console.log(LINHA);
     console.log(` [${nivel}] ${texto}`);

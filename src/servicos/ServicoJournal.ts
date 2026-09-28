@@ -67,6 +67,21 @@ export class ServicoJournal {
         });
     }
 
+    ultimaAlteracao(entidade: string): JournalTransacao | null {
+        const alteracoes = this.lerTodas().filter((t) => {
+            const alterouDados = t.getOperacao() === "CRIAR" || t.getOperacao() === "ALTERAR" || t.getOperacao() === "EXCLUIR";
+            return alterouDados && t.getEntidade() === entidade;
+        });
+
+        const ultima = alteracoes[alteracoes.length - 1];
+
+        if (ultima === undefined) {
+            return null;
+        }
+
+        return ultima;
+    }
+
     listarArquivos(): string[] {
         if (!existsSync(this.pasta)) {
             return [];

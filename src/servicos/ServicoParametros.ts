@@ -1,5 +1,6 @@
 import { RepositorioArquivo } from "../persistencia/RepositorioArquivo.js";
 import { TipoEquipamento } from "../enums/TipoEquipamento.js";
+import type { JournalTransacao } from "../entidades/JournalTransacao.js";
 
 const ARQUIVO_PARAMETROS = "parametros.json";
 const ID_PARAMETROS = "globais";
@@ -50,6 +51,18 @@ export class ServicoParametros {
         this.repositorio.salvarEntidade(ARQUIVO_PARAMETROS, parametros);
     }
 
+    valoresPadrao(): any {
+        return {
+            id: ID_PARAMETROS,
+            aliquotaImposto: 0,
+            coeficientesDepreciacao: { ...COEFICIENTES_PADRAO }
+        };
+    }
+
+    reverterAlteracao(transacao: JournalTransacao): boolean {
+        return transacao.reverter(this.repositorio);
+    }
+
     validarPercentual(valor: number, nome: string): void {
         if (Number.isNaN(valor) || valor < 0 || valor > 100) {
             throw new Error(`${nome} precisa ser um percentual entre 0 e 100.`);
@@ -63,10 +76,6 @@ export class ServicoParametros {
             return salvos;
         }
 
-        return {
-            id: ID_PARAMETROS,
-            aliquotaImposto: 0,
-            coeficientesDepreciacao: { ...COEFICIENTES_PADRAO }
-        };
+        return this.valoresPadrao();
     }
 }

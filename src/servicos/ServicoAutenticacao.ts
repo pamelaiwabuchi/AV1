@@ -82,6 +82,11 @@ export class ServicoAutenticacao {
         this.repositorio.salvarEntidade(ARQUIVO_CREDENCIAIS, credencial.paraDados());
     }
 
+    confirmarSenha(usuario: string, senha: string): boolean {
+        const credencial = this.credenciais.find((c) => c.autenticar(usuario, senha));
+        return credencial !== undefined;
+    }
+
     listarUsuarios(): Credencial[] {
         return this.credenciais;
     }

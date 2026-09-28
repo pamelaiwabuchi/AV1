@@ -80,7 +80,7 @@ export class CLIInterface {
         this.telaLotes = new TelaLotes(this.lote, this.equipamento, this.terminal);
         this.telaEquipamentos = new TelaEquipamentos(this.lote, this.equipamento, this.parametros, this.terminal);
         this.telaJournal = new TelaJournal(this.journal, this.terminal);
-        this.telaParametros = new TelaParametros(this.parametros, this.terminal);
+        this.telaParametros = new TelaParametros(this.parametros, this.journal, this.autenticacao, this.historico, this.terminal);
         this.telaRelatorios = new TelaRelatorios(this.relatorio, this.organizacao, this.terminal);
 
         this.opcoes = [
@@ -223,6 +223,13 @@ export class CLIInterface {
                 uso: "parametros depreciacao",
                 papeisPermitidos: [ADMIN],
                 executar: () => this.telaParametros.alterarCoeficiente()
+            },
+            {
+                texto: "Reverter a última alteração de parâmetros",
+                comando: "parametros reverter",
+                uso: "parametros reverter",
+                papeisPermitidos: [ADMIN],
+                executar: (sessao) => this.telaParametros.reverterUltimaAlteracao(sessao.getUsuario())
             },
             {
                 texto: "Relatório por organização",
@@ -407,7 +414,7 @@ export class CLIInterface {
         try {
             this.sessaoAtual = this.autenticacao.login(usuario, senha);
             this.journal.registrar("LOGIN_SUCESSO", "sessao", null, { usuario: usuario });
-            sucesso(`Bem-vindo(a), ${usuario}! Papel: ${this.sessaoAtual.getPapel()}`);
+            sucesso(`Bem-vindo(a), ${usuario}!`);
         } catch (e) {
             this.journal.definirUsuario("sistema");
             this.journal.registrar("LOGIN_FALHA", "sessao", null, { usuarioInformado: usuario });
