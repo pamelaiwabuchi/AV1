@@ -237,7 +237,7 @@ export class TelaLotes {
 
         try {
             this.lote.processarTriagem(loteId, responsavel);
-            sucesso(`Triagem do lote ${loteId.toUpperCase()} iniciada.`);
+            sucesso(`Triagem do lote ${this.lote.buscarLote(loteId).getId()} iniciada.`);
         } catch (e) {
             erro((e as Error).message);
         }

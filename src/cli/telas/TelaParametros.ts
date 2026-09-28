@@ -31,7 +31,7 @@ export class TelaParametros {
 
         const texto = await perguntarValido(
             this.terminal,
-            "Nova alíquota em % (ex.: 15 ou 15,5; \"cancelar\" para voltar): ",
+            "Nova alíquota em % (ex.: 15 ou 15,5; \"sair\" para voltar): ",
             (valor) => this.problemaPercentual(valor, "A alíquota"),
             false
         );
@@ -62,7 +62,7 @@ export class TelaParametros {
 
         const texto = await perguntarValido(
             this.terminal,
-            "Novo coeficiente em % ao ano (ex.: 20; \"cancelar\" para voltar): ",
+            "Novo coeficiente em % ao ano (ex.: 20; \"sair\" para voltar): ",
             (valor) => this.problemaPercentual(valor, "O coeficiente"),
             false
         );

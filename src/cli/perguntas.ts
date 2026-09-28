@@ -3,13 +3,15 @@ import { ValidadorDataEntrada } from "../validadores/ValidadorDataEntrada.js";
 import { converterData, formatarData } from "./conversores.js";
 import { erro } from "./mensagens.js";
 
+const COMO_SAIR = "Digite novamente, ou \"sair\" para voltar ao menu principal.";
+
 export function pediuCancelamento(texto: string, zeroCancela: boolean): boolean {
     const resposta = texto.trim().toLowerCase();
-    return resposta === "cancelar" || (zeroCancela && resposta === "0");
+    return resposta === "sair" || resposta === "cancelar" || (zeroCancela && resposta === "0");
 }
 
 export function mostrarComoCancelar(): void {
-    console.log("(Para voltar ao menu, digite \"cancelar\" em qualquer campo.)");
+    console.log("(Para voltar ao menu principal, digite \"sair\" em qualquer campo.)");
 }
 
 export function mensagemDeErro(acao: () => void): string | null {
@@ -67,11 +69,12 @@ export async function perguntarValido(
         }
 
         erro(problema);
+        console.log(COMO_SAIR);
     }
 }
 
-export async function escolherOpcao(terminal: Interface, titulo: string, opcoes: string[]): Promise<string | null> {
-    console.log(`${titulo} (0 para cancelar):`);
+export async function escolherOpcao(terminal: Interface, titulo: string, opcoes: string[], textoDoZero: string = "cancelar"): Promise<string | null> {
+    console.log(`${titulo} (0 para ${textoDoZero}):`);
 
     opcoes.forEach((opcao, i) => {
         console.log(`  ${i + 1} - ${opcao}`);
@@ -90,7 +93,7 @@ export async function escolherOpcao(terminal: Interface, titulo: string, opcoes:
             return escolhida;
         }
 
-        erro(`Opção inválida. Digite um número de 1 a ${opcoes.length}, ou 0 para cancelar.`);
+        erro(`Opção inválida. Digite um número de 1 a ${opcoes.length}, ou 0 (ou "sair") para ${textoDoZero}.`);
     }
 }
 
@@ -120,7 +123,7 @@ export async function perguntarDataEntrada(terminal: Interface, informada: strin
         if (resposta === undefined) {
             console.log("Data de entrada:");
             console.log(`  1 - Hoje (${formatarData(new Date())})`);
-            console.log("  0 - Voltar ao menu");
+            console.log("  0 - Voltar ao menu principal");
             resposta = await terminal.question("  ou digite a data (dd/mm/aaaa): ");
         }
 
@@ -141,12 +144,14 @@ export async function perguntarDataEntrada(terminal: Interface, informada: strin
         }
 
         if (data === null) {
-            erro("Data inválida. Use o formato dd/mm/aaaa, 1 para hoje ou 0 para voltar ao menu.");
+            erro("Data inválida. Use o formato dd/mm/aaaa.");
+            console.log(COMO_SAIR);
             continue;
         }
 
         if (!validador.validar(data)) {
             erro(validador.obterMensagemErro());
+            console.log(COMO_SAIR);
             continue;
         }
 
@@ -214,6 +219,8 @@ export async function escolherPeriodo(terminal: Interface): Promise<{ inicio: Da
 
         return { inicio: dataInicio, fim: converterData(textoFim) as Date };
     }
+
+    inicio.setDate(inicio.getDate() + 1);
 
     return { inicio: inicio, fim: hoje };
 }

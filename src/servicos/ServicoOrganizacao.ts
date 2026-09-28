@@ -46,12 +46,16 @@ export class ServicoOrganizacao {
             throw new Error("O endereço completo é obrigatório.");
         }
 
-        if (telefone === "") {
-            throw new Error("O telefone é obrigatório.");
+        const problemaTelefone = this.verificarTelefone(telefone);
+
+        if (problemaTelefone !== null) {
+            throw new Error(problemaTelefone);
         }
 
-        if (email === "") {
-            throw new Error("O e-mail é obrigatório.");
+        const problemaEmail = this.verificarEmail(email);
+
+        if (problemaEmail !== null) {
+            throw new Error(problemaEmail);
         }
 
         const cnpj = this.validadorCNPJ.limpar(dados.cnpj);
@@ -86,6 +90,32 @@ export class ServicoOrganizacao {
 
         if (this.listarTodas().find((o) => o.getCnpj() === limpo) !== undefined) {
             return "Já existe uma organização cadastrada com este CNPJ.";
+        }
+
+        return null;
+    }
+
+    verificarTelefone(telefone: string): string | null {
+        if (telefone.trim() === "") {
+            return "O telefone é obrigatório.";
+        }
+
+        const digitos = telefone.replace(/\D/g, "");
+
+        if (digitos.length !== 10 && digitos.length !== 11) {
+            return "Telefone inválido. Informe o DDD e o número, com 10 ou 11 dígitos. Ex.: (11) 3333-4444 ou (11) 98888-7777.";
+        }
+
+        return null;
+    }
+
+    verificarEmail(email: string): string | null {
+        if (email.trim() === "") {
+            return "O e-mail é obrigatório.";
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+            return "E-mail inválido. Use o formato nome@dominio.com.br.";
         }
 
         return null;

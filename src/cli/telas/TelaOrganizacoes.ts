@@ -41,13 +41,13 @@ export class TelaOrganizacoes {
             return;
         }
 
-        const telefone = await perguntarValido(this.terminal, "Telefone: ", naoVazio("O telefone é obrigatório."), true);
+        const telefone = await perguntarValido(this.terminal, "Telefone com DDD: ", (texto) => this.organizacao.verificarTelefone(texto), true);
         if (telefone === null) {
             aviso("Cadastro de organização cancelado.");
             return;
         }
 
-        const email = await perguntarValido(this.terminal, "E-mail: ", naoVazio("O e-mail é obrigatório."), true);
+        const email = await perguntarValido(this.terminal, "E-mail: ", (texto) => this.organizacao.verificarEmail(texto), true);
         if (email === null) {
             aviso("Cadastro de organização cancelado.");
             return;
