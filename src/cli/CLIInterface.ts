@@ -256,6 +256,8 @@ export class CLIInterface {
     }
 
     async iniciarLoop(): Promise<void> {
+        let mostrarMenu = true;
+
         while (true) {
             const sessao = this.sessaoAtual;
 
@@ -267,17 +269,27 @@ export class CLIInterface {
                     break;
                 }
 
+                mostrarMenu = true;
                 continue;
             }
 
-            this.exibirMenuPorPapel(sessao.getPapel());
+            if (mostrarMenu) {
+                this.exibirMenuPorPapel(sessao.getPapel());
+            } else {
+                console.log("");
+                console.log("(Aperte Enter para ver o menu, ou digite um comando.)");
+            }
+
             this.historico.esquecerRespostas();
 
             const entrada = (await this.terminal.question("Opção ou comando: ")).trim();
 
-            if (entrada === "") {
+            if (entrada === "" || entrada.toLowerCase() === "menu") {
+                mostrarMenu = true;
                 continue;
             }
+
+            mostrarMenu = false;
 
             this.historico.registrarComando(entrada);
 
@@ -369,7 +381,7 @@ export class CLIInterface {
         }
 
         const comandos = this.opcoesDoPapel(sessao.getPapel()).map((o) => o.comando);
-        comandos.push("ajuda", "sair");
+        comandos.push("ajuda", "menu", "sair");
 
         const digitado = linha.trimStart().toLowerCase();
         const encontrados = comandos.filter((c) => c.startsWith(digitado));
@@ -389,6 +401,8 @@ export class CLIInterface {
             console.log(`      ${opcao.texto}`);
         }
 
+        console.log("  menu");
+        console.log("      Mostrar o menu (o mesmo que apertar Enter)");
         console.log("  sair");
         console.log("Os parâmetros que você não informar serão perguntados em seguida.");
         console.log("Para valores com espaço, use aspas: --transp \"Trans Rápida\"");
@@ -414,7 +428,7 @@ export class CLIInterface {
         try {
             this.sessaoAtual = this.autenticacao.login(usuario, senha);
             this.journal.registrar("LOGIN_SUCESSO", "sessao", null, { usuario: usuario });
-            sucesso(`Bem-vindo(a), ${usuario}!`);
+            sucesso(`Bem-vindo(a), ${usuario}! Papel: ${this.sessaoAtual.getPapel()}`);
         } catch (e) {
             this.journal.definirUsuario("sistema");
             this.journal.registrar("LOGIN_FALHA", "sessao", null, { usuarioInformado: usuario });

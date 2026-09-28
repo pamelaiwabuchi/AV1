@@ -93,7 +93,8 @@ Um dos requisitos do projeto é que senhas sejam protegidas com o algoritmo de h
 - **Rotação:** quando o arquivo passa de **10 MB**, ele é renomeado com a data e a hora, e um arquivo novo começa. Se dois arquivos forem rotacionados no mesmo milissegundo, o segundo recebe um número no final, para um não substituir o outro.
 - **Retenção:** de acordo com os critérios, o journal deve ser mantido por no mínimo 180 dias. Nesta primeira versão os arquivos nunca são apagados.
 - A consulta do journal é permitida ao **administrador** e ao **auditor**.
-- O método `reverter()` existe e desfaz uma alteração, restaurando os dados de antes. Ele devolve `true` quando consegue e `false` quando a transação não alterou dados (um login, por exemplo). Por segurança, ele não está disponível no menu. O acesso dele
+- O método `reverter()` desfaz uma alteração, restaurando os dados de antes. Ele devolve `true` quando consegue e `false` quando a transação não alterou dados (um login, por exemplo). No sistema, ele é usado para **reverter a última alteração dos parâmetros globais**, pelo comando `parametros reverter`, disponível só para o administrador. Antes de reverter, o sistema mostra o que vai mudar e pede a senha do administrador; se a senha estiver errada, a reversão é cancelada, sem nova tentativa. A reversão fica registrada no journal, com uma linha `REVERTER` e uma `ALTERAR`.
+- A reversão foi liberada só para os parâmetros porque eles não afetam outros dados. Reverter os demais dados com segurança exigiria tratar as dependências entre eles: por exemplo, desfazer a criação de uma organização deixaria os lotes dela sem organização, e desfazer uma movimentação antiga apagaria as movimentações que vieram depois.
 
 ### 2.6 Histórico de comandos
 
@@ -255,3 +256,7 @@ Testes realizados:
 **Relatórios salvos sem criptografia.** Os relatórios salvos em arquivo ficam em texto aberto, para poderem ser lidos por outras pessoas. Por isso a pasta `relatorios` fica fora do Git.
 
 **Crescimento do journal.** Como os arquivos do journal nunca são apagados, eles se acumulam com o tempo. Melhoria: arquivar ou apagar automaticamente os arquivos com mais de 180 dias, se a política da empresa permitir.
+
+**Reversão de outros dados.** Hoje só os parâmetros globais podem ser revertidos. Estender a reversão para os demais dados exigiria regras para cada tipo: impedir reversões que deixem dados sem referência (um lote sem organização), recalcular o que depende do dado revertido (o status do lote) e permitir apenas a reversão da alteração mais recente de cada registro.
+
+**Data das mudanças de status do lote.** O lote mostra o status atual, mas não desde quando está nele (por exemplo, "em triagem desde 26/11/2026"). Melhoria: guardar a data de cada mudança de status do lote, como já é feito nas movimentações dos equipamentos.

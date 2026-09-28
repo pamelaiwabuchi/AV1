@@ -50,6 +50,38 @@ Nas próximas vezes, o `npm start` vai direto para o login.
 
 ---
 
+## Testar com dados de exemplo
+
+```bash
+npm run demo
+```
+
+Abre o sistema com dados de exemplo, prontos para testar todas as funções. Os dados ficam na pasta `data-demo`, separada da pasta `data`, para não alterar dados reais.
+
+| Usuário | Senha | Papel |
+|---|---|---|
+| `admin` | `admin123` | Administrador |
+| `operador1` | `operador123` | Operador de cadastro |
+| `gestor1` | `gestor123` | Gestor de almoxarifado |
+| `auditor1` | `auditor123` | Auditor |
+
+O que já vem pronto:
+
+| Dado | Situação | Para testar |
+|---|---|---|
+| Organização `BR001` | Contrato atual `CT002`, que substituiu o `CT001` | Relatório financeiro com contrato anterior |
+| Organização `BR003` | Sem contrato | Recusa ao registrar um lote |
+| Organização `BR004` | CNPJ alfanumérico | Formato novo de CNPJ |
+| Lote `LT001` | Finalizado | Rastrear o `NOT-000001`, que passou por várias movimentações |
+| Lote `LT002` | Encaminhado | Movimentar o `SER-000003` e o `IMP-000004` |
+| Lote `LT003` | Em triagem | Avaliar o `COM-000005` e o `ROT-000006` |
+| Lote `LT004` | Recebido | Iniciar a triagem e adicionar equipamentos |
+| Parâmetros | Alíquota de 10% e monitor com 25% | Reverter a última alteração |
+
+Nas perguntas de código, o sistema mostra os códigos disponíveis para aquela operação (até os 10 mais recentes).
+
+Para recomeçar a demonstração do zero, apague a pasta `data-demo`.
+
 ## Como usar
 
 ### Papéis
@@ -107,8 +139,12 @@ Opção ou comando: lote criar --org BR001 --nf 123456 --transp TransRapida
 | `relatorio organizacao --org <código>` | Relatório de uma organização num período | Administrador, Auditor |
 | `relatorio status` | Equipamentos por status (um ou todos) | Administrador, Auditor |
 | `relatorio financeiro` | Receita dos contratos num período, com impostos | Administrador, Auditor |
+| `parametros reverter` | Desfaz a última alteração da alíquota ou dos coeficientes (pede a senha) | Administrador |
+| `menu` | Mostra o menu de novo (o mesmo que apertar Enter) | Todos |0
 
 Datas são sempre no formato `dd/mm/aaaa`. Os códigos seguem os padrões `BR001` (organização), `CT001` (contrato), `LT001` (lote) e `NOT-000001` (código de barras do equipamento).
+
+- Depois de cada comando, o resultado fica na tela e o menu não é repetido. **Enter** (ou `menu`) mostra o menu de novo.
 
 ### Fluxo típico
 
@@ -128,7 +164,7 @@ npm test
 
 Abre o sistema de verdade e simula quatro pessoas usando: o administrador provisiona o sistema e cadastra a equipe, o operador cadastra a organização e o contrato, o gestor registra o lote e movimenta os equipamentos, e o auditor rastreia um equipamento, gera um relatório e consulta o journal. No final, mostra quantos passos deram certo.
 
-A jornada usa uma pasta própria (`data-jornada`), que é apagada no final. **Os seus dados na pasta `data` não são tocados.**
+A jornada usa uma pasta própria (`data-jornada`), que é apagada no final. **Os dados na pasta `data` não são tocados.**
 
 ### Verificação de tipos
 

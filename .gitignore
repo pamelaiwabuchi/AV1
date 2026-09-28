@@ -1,7 +1,6 @@
 node_modules/
-dist/
-*.log
 data/
 data-teste/
-relatorios/
 data-jornada/
+data-demo/
+relatorios/

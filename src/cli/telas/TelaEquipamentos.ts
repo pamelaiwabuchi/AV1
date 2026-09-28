@@ -3,8 +3,9 @@ import { ServicoLote } from "../../servicos/ServicoLote.js";
 import { ServicoEquipamento } from "../../servicos/ServicoEquipamento.js";
 import { ServicoParametros } from "../../servicos/ServicoParametros.js";
 import { StatusRastreamento } from "../../enums/StatusRastreamento.js";
+import { Equipamento } from "../../entidades/Equipamento.js";
 import { formatarData } from "../conversores.js";
-import { escolherOpcao, mensagemDeErro, mostrarComoCancelar, naoVazio, perguntarValido } from "../perguntas.js";
+import { escolherOpcao, mensagemDeErro, mostrarComoCancelar, mostrarDisponiveis, naoVazio, perguntarValido } from "../perguntas.js";
 import { sucesso, aviso, erro } from "../mensagens.js";
 
 export class TelaEquipamentos {
@@ -22,6 +23,14 @@ export class TelaEquipamentos {
 
     async movimentar(responsavel: string, parametros: Record<string, string> = {}): Promise<void> {
         mostrarComoCancelar();
+
+        if (parametros["codigo"] === undefined) {
+            const movimentaveis = this.equipamento.listarEquipamentos().filter((e) =>
+                e.getStatusRastreamento() === StatusRastreamento.AGUARDANDO_DESMONTE ||
+                e.getStatusRastreamento() === StatusRastreamento.EM_DESMONTE
+            );
+            mostrarDisponiveis("Equipamentos que podem ser movimentados", this.descreverEquipamentos(movimentaveis));
+        }
 
         const codigo = await this.perguntarCodigo(parametros);
 
@@ -70,6 +79,10 @@ export class TelaEquipamentos {
     }
 
     async rastrear(parametros: Record<string, string> = {}): Promise<void> {
+        if (parametros["codigo"] === undefined) {
+            mostrarDisponiveis("Equipamentos", this.descreverEquipamentos(this.equipamento.listarEquipamentos()));
+        }
+
         const codigo = await this.perguntarCodigo(parametros);
 
         if (codigo === null) {
@@ -100,6 +113,12 @@ export class TelaEquipamentos {
                 console.log(`        ${movimentacao.getObservacao()}`);
             }
         }
+    }
+
+    private descreverEquipamentos(equipamentos: Equipamento[]): string[] {
+        return [...equipamentos].reverse().map((e) =>
+            `${e.getCodigoBarrasInterno()} - ${e.getTipo()} ${e.getMarca()} ${e.getModelo()} - lote ${e.getLoteId()} - ${e.getStatusRastreamento()}`
+        );
     }
 
     private async perguntarCodigo(parametros: Record<string, string>): Promise<string | null> {

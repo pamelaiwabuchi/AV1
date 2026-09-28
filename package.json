@@ -5,6 +5,7 @@
   "main": "src/index.ts",
   "scripts": {
     "start": "tsx src/index.ts",
+    "demo": "tsx src/demo.ts",
     "verificar": "tsc --noEmit",
     "test": "tsx tests/jornada-completa.ts"
   },

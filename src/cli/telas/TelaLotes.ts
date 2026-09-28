@@ -5,18 +5,21 @@ import { Equipamento } from "../../entidades/Equipamento.js";
 import { StatusRastreamento } from "../../enums/StatusRastreamento.js";
 import { TipoEquipamento } from "../../enums/TipoEquipamento.js";
 import { EstadoFisico } from "../../enums/EstadoFisico.js";
+import { StatusLote } from "../../enums/StatusLote.js";
 import { converterData, converterValor, formatarData } from "../conversores.js";
 import {
     dataValida,
     escolherOpcao,
     mensagemDeErro,
     mostrarComoCancelar,
+    mostrarDisponiveis,
     naoVazio,
     perguntarDataEntrada,
     perguntarSimOuNao,
     perguntarValido
 } from "../perguntas.js";
 import { sucesso, aviso, erro } from "../mensagens.js";
+import { Lote } from "../../entidades/Lote.js";
 
 export class TelaLotes {
     private lote: ServicoLote;
@@ -31,6 +34,11 @@ export class TelaLotes {
 
     async registrar(parametros: Record<string, string> = {}): Promise<void> {
         mostrarComoCancelar();
+
+        if (parametros["org"] === undefined) {
+            const aptas = this.lote.listarOrganizacoesAptas().reverse();
+            mostrarDisponiveis("Organizações com contrato vigente", aptas.map((o) => `${o.getId()} - ${o.getRazaoSocial()}`));
+        }
 
         const organizacaoId = await perguntarValido(
             this.terminal,
@@ -130,6 +138,11 @@ export class TelaLotes {
     async adicionarEquipamentos(responsavel: string, parametros: Record<string, string> = {}): Promise<void> {
         mostrarComoCancelar();
 
+        if (parametros["lote"] === undefined) {
+            const abertos = this.lote.listarLotes().filter((l) => this.lote.verificarLoteAceitaEquipamentos(l.getId()) === null);
+            mostrarDisponiveis("Lotes que aceitam equipamentos", this.descreverLotes(abertos));
+        }
+
         const loteId = await perguntarValido(
             this.terminal,
             "Código do lote (ex.: LT001): ",
@@ -222,6 +235,11 @@ export class TelaLotes {
     }
 
     async iniciarTriagem(responsavel: string, parametros: Record<string, string> = {}): Promise<void> {
+        if (parametros["lote"] === undefined) {
+            const recebidos = this.lote.listarLotes().filter((l) => l.getStatusProcessamento() === StatusLote.RECEBIDO);
+            mostrarDisponiveis("Lotes aguardando triagem", this.descreverLotes(recebidos));
+        }
+
         const loteId = await perguntarValido(
             this.terminal,
             "Código do lote (ex.: LT001): ",
@@ -245,6 +263,11 @@ export class TelaLotes {
 
     async avaliarEquipamento(responsavel: string, parametros: Record<string, string> = {}): Promise<void> {
         mostrarComoCancelar();
+
+        if (parametros["codigo"] === undefined) {
+            const emTriagem = this.equipamento.listarPorStatus(StatusRastreamento.EM_TRIAGEM).reverse();
+            mostrarDisponiveis("Equipamentos em triagem", emTriagem.map((e) => this.descreverEquipamento(e)));
+        }
 
         const codigo = await perguntarValido(
             this.terminal,
@@ -315,6 +338,10 @@ export class TelaLotes {
     }
 
     async relatorioTriagem(parametros: Record<string, string> = {}): Promise<void> {
+        if (parametros["lote"] === undefined) {
+            mostrarDisponiveis("Lotes", this.descreverLotes(this.lote.listarLotes()));
+        }
+
         const loteId = await perguntarValido(
             this.terminal,
             "Código do lote (ex.: LT001): ",
@@ -329,6 +356,16 @@ export class TelaLotes {
         }
 
         console.log(this.lote.buscarLote(loteId).gerarRelatorioTriagem());
+    }
+
+    private descreverLotes(lotes: Lote[]): string[] {
+        return [...lotes].reverse().map((l) =>
+            `${l.getId()} - ${l.getOrganizacaoId()} - NF ${l.getNotaFiscal()} - entrada ${formatarData(l.getDataEntrada())} - ${l.getStatusProcessamento()}`
+        );
+    }
+
+    private descreverEquipamento(e: Equipamento): string {
+        return `${e.getCodigoBarrasInterno()} - ${e.getTipo()} ${e.getMarca()} ${e.getModelo()} - lote ${e.getLoteId()}`;
     }
 
     private async perguntarPeriodo(parametros: Record<string, string>): Promise<{ inicio: Date; fim: Date } | null> {

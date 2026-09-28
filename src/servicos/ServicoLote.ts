@@ -63,6 +63,14 @@ export class ServicoLote {
         return lote;
     }
 
+    listarLotes(): Lote[] {
+        return this.listarTodos();
+    }
+
+    listarOrganizacoesAptas(): Organizacao[] {
+        return this.organizacoes.listarOrganizacoesAtivas().filter((o) => this.verificarOrganizacao(o.getId()) === null);
+    }
+
     verificarOrganizacao(organizacaoId: string): string | null {
         try {
             this.buscarOrganizacaoApta(organizacaoId);

@@ -4,7 +4,7 @@ import type { Interface } from "node:readline/promises";
 import { ServicoRelatorio } from "../../servicos/ServicoRelatorio.js";
 import { ServicoOrganizacao } from "../../servicos/ServicoOrganizacao.js";
 import { StatusRastreamento } from "../../enums/StatusRastreamento.js";
-import { escolherOpcao, escolherPeriodo, mensagemDeErro, perguntarSimOuNao, perguntarValido } from "../perguntas.js";
+import { escolherOpcao, escolherPeriodo, mensagemDeErro, mostrarDisponiveis, perguntarSimOuNao, perguntarValido } from "../perguntas.js";
 import { sucesso, aviso, erro } from "../mensagens.js";
 
 const PASTA_RELATORIOS = "relatorios";
@@ -69,6 +69,11 @@ export class TelaRelatorios {
     }
 
     private async gerarPorOrganizacao(parametros: Record<string, string>): Promise<boolean> {
+        if (parametros["org"] === undefined) {
+            const todas = this.organizacao.listarOrganizacoes().reverse();
+            mostrarDisponiveis("Organizações", todas.map((o) => `${o.getId()} - ${o.getRazaoSocial()}`));
+        }
+
         const organizacaoId = await perguntarValido(
             this.terminal,
             "Código da organização (ex.: BR001): ",

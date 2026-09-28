@@ -2,7 +2,7 @@ import type { Interface } from "node:readline/promises";
 import { ServicoOrganizacao } from "../../servicos/ServicoOrganizacao.js";
 import { Organizacao } from "../../entidades/Organizacao.js";
 import { converterData, converterValor, formatarData, formatarValor } from "../conversores.js";
-import { dataValida, pediuCancelamento, mensagemDeErro, mostrarComoCancelar, naoVazio, perguntarSimOuNao, perguntarValido } from "../perguntas.js";
+import { dataValida, pediuCancelamento, mensagemDeErro, mostrarComoCancelar, mostrarDisponiveis, naoVazio, perguntarSimOuNao, perguntarValido } from "../perguntas.js";
 import { sucesso, aviso, erro } from "../mensagens.js";
 
 export class TelaOrganizacoes {
@@ -268,6 +268,11 @@ export class TelaOrganizacoes {
     }
 
     private async perguntarOrganizacao(parametros: Record<string, string>): Promise<Organizacao | null> {
+        if (parametros["org"] === undefined) {
+            const ativas = this.organizacao.listarOrganizacoesAtivas().reverse();
+            mostrarDisponiveis("Organizações ativas", ativas.map((o) => `${o.getId()} - ${o.getRazaoSocial()}`));
+        }
+
         const codigo = await perguntarValido(
             this.terminal,
             "Código da organização (ex.: BR001): ",

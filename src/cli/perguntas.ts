@@ -3,6 +3,8 @@ import { ValidadorDataEntrada } from "../validadores/ValidadorDataEntrada.js";
 import { converterData, formatarData } from "./conversores.js";
 import { erro } from "./mensagens.js";
 
+const LIMITE_LISTAGEM = 10;
+
 const COMO_SAIR = "Digite novamente, ou \"sair\" para voltar ao menu principal.";
 
 export function pediuCancelamento(texto: string, zeroCancela: boolean): boolean {
@@ -12,6 +14,23 @@ export function pediuCancelamento(texto: string, zeroCancela: boolean): boolean 
 
 export function mostrarComoCancelar(): void {
     console.log("(Para voltar ao menu principal, digite \"sair\" em qualquer campo.)");
+}
+
+export function mostrarDisponiveis(titulo: string, itens: string[]): void {
+    if (itens.length === 0) {
+        console.log(`${titulo}: nenhum no momento.`);
+        return;
+    }
+
+    console.log(`${titulo}:`);
+
+    for (const item of itens.slice(0, LIMITE_LISTAGEM)) {
+        console.log(`  ${item}`);
+    }
+
+    if (itens.length > LIMITE_LISTAGEM) {
+        console.log(`  ... e mais ${itens.length - LIMITE_LISTAGEM} (mostrando os ${LIMITE_LISTAGEM} mais recentes).`);
+    }
 }
 
 export function mensagemDeErro(acao: () => void): string | null {
