@@ -1,5 +1,5 @@
-import { Credencial } from "../src/Credencial.js";
-import { PapelUsuario } from "../src/PapelUsuario.js";
+import { Credencial } from "../src/entidades/Credencial.js";
+import { PapelUsuario } from "../src/enums/PapelUsuario.js";
 
 const amanda = Credencial.criarNova("amanda", "senha123", PapelUsuario.AUDITOR);
 const jose = Credencial.criarNova("jose", "senha123", PapelUsuario.GESTOR_ALMOXARIFADO);

@@ -1,6 +1,6 @@
 import { randomBytes, createHash } from "node:crypto";
-import type { Autenticavel } from "./Autenticavel.js";
-import { PapelUsuario } from "./PapelUsuario.js";
+import type { Autenticavel } from "../interfaces/Autenticavel.js";
+import { PapelUsuario } from "../enums/PapelUsuario.js";
 
 export class Credencial implements Autenticavel {
     private usuario: string;
@@ -42,6 +42,20 @@ export class Credencial implements Autenticavel {
 
     renovarToken(): string {
         return randomBytes(32).toString("hex");
+    }
+        paraDados(): any {
+        return {
+            id: this.usuario,
+            usuario: this.usuario,
+            hashSenha: this.hashSenha,
+            salt: this.salt,
+            ultimoAcesso: this.ultimoAcesso,
+            papel: this.papel
+        };
+    }
+
+    static deDados(dados: any): Credencial {
+        return new Credencial(dados.usuario, dados.hashSenha, dados.salt, new Date(dados.ultimoAcesso), dados.papel);
     }
 
     getUsuario(): string {

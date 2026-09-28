@@ -1,19 +1,20 @@
-import { iniciarSistema } from "./provisionamento.js";
-import { fazerLogin } from "./autenticacao.js";
-import { abrirMenu } from "./menu.js";
+import { createInterface } from "node:readline/promises";
+import { obterChaveMestra, PASTA_DADOS } from "./cli/provisionamento.js";
+import { RepositorioArquivo } from "./persistencia/RepositorioArquivo.js";
+import { ServicoAutenticacao } from "./servicos/ServicoAutenticacao.js";
+import { ServicoOrganizacao } from "./servicos/ServicoOrganizacao.js";
+import { CLIInterface } from "./cli/CLIInterface.js";
 
-await iniciarSistema();
+const terminal = createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
-while (true) {
-    const usuarioLogado = await fazerLogin();
+const chave = await obterChaveMestra(terminal);
 
-    if (usuarioLogado === null) {
-        continue;
-    }
+const repositorio = new RepositorioArquivo(PASTA_DADOS, chave);
+const autenticacao = new ServicoAutenticacao(repositorio);
+const organizacao = new ServicoOrganizacao(repositorio);
 
-    const resultado = await abrirMenu(usuarioLogado);
-
-    if (resultado === "sair") {
-        break;
-    }
-}
+const cli = new CLIInterface(autenticacao, organizacao, terminal);
+await cli.iniciarLoop();

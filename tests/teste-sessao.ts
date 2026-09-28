@@ -1,6 +1,6 @@
-import { Credencial } from "../src/Credencial.js";
-import { Sessao } from "../src/Sessao.js";
-import { PapelUsuario } from "../src/PapelUsuario.js";
+import { Credencial } from "../src/entidades/Credencial.js";
+import { Sessao } from "../src/entidades/Sessao.js";
+import { PapelUsuario } from "../src/enums/PapelUsuario.js";
 
 function esperar(milissegundos: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, milissegundos));

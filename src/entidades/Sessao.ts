@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
-import type { Autenticavel } from "./Autenticavel.js";
-import { PapelUsuario } from "./PapelUsuario.js";
+import type { Autenticavel } from "../interfaces/Autenticavel.js";
+import { PapelUsuario } from "../enums/PapelUsuario.js";
 
 export class Sessao implements Autenticavel {
     private token: string;

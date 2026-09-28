@@ -31,7 +31,7 @@ export class ValidadorCNPJ extends Validador {
         return true;
     }
 
-    private limpar(cnpj: string): string {
+    limpar(cnpj: string): string {
         return cnpj.trim().toUpperCase().replaceAll(".", "").replaceAll("/", "").replaceAll("-", "");
     }
 
