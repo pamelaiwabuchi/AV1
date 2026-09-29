@@ -89,12 +89,13 @@ Um dos requisitos do projeto é que senhas sejam protegidas com o algoritmo de h
 - **Tudo** é registrado: cada opção do menu e cada comando, cada dado criado, alterado ou excluído, os logins (certos e errados), os logouts, as sessões expiradas e o provisionamento.
 - Nas alterações de dados, o registro guarda os **dados de antes e de depois**, e é gravado **antes** de a alteração ser aplicada.
 - O journal é **imutável**: o sistema só acrescenta linhas no final do arquivo, e nunca edita ou apaga uma linha.
-- Cada linha é **criptografada** separadamente, porque o journal guarda cópias dos dados protegidos.
+- O journal é **criptografado**, porque guarda cópias dos dados protegidos (os dados de antes e de depois de cada alteração); em texto aberto, ele revelaria tudo o que os outros arquivos escondem.
+- Cada linha é criptografada **separadamente**: assim, cada transação nova é apenas acrescentada no final do arquivo, sem precisar decifrar e regravar as linhas anteriores, que nunca são alteradas.
 - **Rotação:** quando o arquivo passa de **10 MB**, ele é renomeado com a data e a hora, e um arquivo novo começa. Se dois arquivos forem rotacionados no mesmo milissegundo, o segundo recebe um número no final, para um não substituir o outro.
 - **Retenção:** de acordo com os critérios, o journal deve ser mantido por no mínimo 180 dias. Nesta primeira versão os arquivos nunca são apagados.
 - A consulta do journal é permitida ao **administrador** e ao **auditor**.
 - O método `reverter()` desfaz uma alteração, restaurando os dados de antes. Ele devolve `true` quando consegue e `false` quando a transação não alterou dados (um login, por exemplo). No sistema, ele é usado para **reverter a última alteração dos parâmetros globais**, pelo comando `parametros reverter`, disponível só para o administrador. Antes de reverter, o sistema mostra o que vai mudar e pede a senha do administrador; se a senha estiver errada, a reversão é cancelada, sem nova tentativa. A reversão fica registrada no journal, com uma linha `REVERTER` e uma `ALTERAR`.
-- A reversão foi liberada só para os parâmetros porque eles não afetam outros dados. Reverter os demais dados com segurança exigiria tratar as dependências entre eles: por exemplo, desfazer a criação de uma organização deixaria os lotes dela sem organização, e desfazer uma movimentação antiga apagaria as movimentações que vieram depois.
+- A reversão foi liberada só para os parâmetros porque eles não afetam outros dados. Reverter os demais dados com segurança exigiria tratar as dependências entre eles: por exemplo, desfazer a criação de uma organização deixaria os lotes dela sem organização, e desfazer uma movimentação antiga apagaria as movimentações que vieram depois - o que pode ser implementado futuramente, ou não.
 
 ### 2.6 Histórico de comandos
 
@@ -110,8 +111,6 @@ Um dos requisitos do projeto é que senhas sejam protegidas com o algoritmo de h
 ---
 
 ## 3. Regras de negócio decididas
-
-O enunciado deixa várias regras em aberto. Estas foram as decisões tomadas.
 
 ### Organizações
 - Todos os campos são obrigatórios: razão social, CNPJ, inscrição estadual, endereço, telefone e e-mail.
@@ -230,10 +229,12 @@ Cuidados tomados no código:
 - a jornada abre o sistema com o próprio Node, sem depender do `npx`.
 
 Testes realizados:
-- **Linux:** [PREENCHER: distribuição e versão do Node]. Todos os testes e a jornada completa passaram.
-- **Windows:** [PREENCHER: versão do Windows, versão do Node e o resultado].
+- **Linux:** testado manualmente (Node 26.7.0) e automaticamente no GitHub Actions (Ubuntu, Node 22). Todos os testes e a jornada completa passaram.
+- **Windows:** testado automaticamente no GitHub Actions (Windows Server, Node 22): instalação das dependências, verificação de tipos e jornada completa, que usa o sistema de verdade, do provisionamento à rastreabilidade. Todos os passos passaram.
 
----
+Os testes automáticos rodam a cada envio para o repositório, pelo arquivo `.github/workflows/testes.yml`, e os resultados ficam na aba **Actions** do GitHub.
+
+O uso interativo num terminal do Windows (Tab, histórico de comandos e exibição dos caracteres especiais) não foi testado manualmente.
 
 ## 7. Limitações conhecidas e melhorias futuras
 
@@ -253,10 +254,9 @@ Testes realizados:
 
 **Dependência do relógio do computador.** Todas as datas "de hoje" (validade de contratos, prazo dos lotes, sessão, depreciação) vêm do relógio do computador. Se ele estiver errado, as datas também ficam erradas.
 
-**Relatórios salvos sem criptografia.** Os relatórios salvos em arquivo ficam em texto aberto, para poderem ser lidos por outras pessoas. Por isso a pasta `relatorios` fica fora do Git.
-
 **Crescimento do journal.** Como os arquivos do journal nunca são apagados, eles se acumulam com o tempo. Melhoria: arquivar ou apagar automaticamente os arquivos com mais de 180 dias, se a política da empresa permitir.
 
 **Reversão de outros dados.** Hoje só os parâmetros globais podem ser revertidos. Estender a reversão para os demais dados exigiria regras para cada tipo: impedir reversões que deixem dados sem referência (um lote sem organização), recalcular o que depende do dado revertido (o status do lote) e permitir apenas a reversão da alteração mais recente de cada registro.
 
 **Data das mudanças de status do lote.** O lote mostra o status atual, mas não desde quando está nele (por exemplo, "em triagem desde 26/11/2026"). Melhoria: guardar a data de cada mudança de status do lote, como já é feito nas movimentações dos equipamentos.
+
