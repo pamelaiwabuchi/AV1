@@ -40,9 +40,9 @@ A segurança do sistema é organizada em camadas, cada uma protegendo contra um 
 
 ### 2.1 Criptografia dos arquivos (AES-256-GCM)
 
-O enunciado exige que os dados fiquem em arquivos, sem banco de dados, e que esses arquivos sejam criptografados.
+Nesta primeira fase os dados devem ficar em arquivos criptografados, sem o banco de dados.
 
-**Arquivos criptografados:** `credenciais.json`, `organizacoes.json`, `contratos-anteriores.json`, `lotes.json`, `equipamentos.json`, `parametros.json`, `historico.enc` (comandos digitados) e o journal (cada linha criptografada separadamente). Vale ressaltar que `historico.enc` não armazena nenhuma senha digitada no terminal. Isso ocorre pois ele armazena apenas os comandos digitados no menu principal, e as senhas são digitadas sempre em outras perguntas.
+**Arquivos criptografados:** `credenciais.json`, `organizacoes.json`, `contratos-anteriores.json`, `lotes.json`, `equipamentos.json`, `parametros.json`, `historico.enc` (que armazena comandos digitados) e o journal (armazena cada linha criptografada separadamente). Vale ressaltar que `historico.enc` não armazena nenhuma senha digitada no terminal, pois ele armazena apenas os comandos digitados no menu principal, e as senhas são digitadas sempre em outras perguntas.
 
 **Arquivos não criptografados:**
 - `config.json`, que guarda a própria chave de criptografia - o que traz uma limitação de segurança, descrita mais à frente na [seção 7](#7-limitações-conhecidas-e-melhorias-futuras);
@@ -50,22 +50,22 @@ O enunciado exige que os dados fiquem em arquivos, sem banco de dados, e que ess
 
 **Por que AES-256-GCM:**
 - **AES** é um algoritmo simétrico: a mesma chave cifra e decifra. Serve aqui porque é o próprio sistema que grava e lê os arquivos.
-- **256** é o tamanho da chave, em bits (32 bytes). É o maior tamanho do AES. A chave é gerada com `randomBytes(32)`, que usa o gerador de números aleatórios seguro do sistema operacional.
-- **GCM** é um modo **autenticado**: além de esconder o conteúdo (confidencialidade), ele gera uma etiqueta de autenticação (a *tag*) que detecta qualquer alteração no arquivo (integridade). Se alguém mudar um único caractere, a leitura falha, em vez de devolver dados corrompidos ou forjados.
+- **256** é o tamanho da chave, em bits (32 bytes). É o maior tamanho do AES. A chave é gerada com `randomBytes(32)`, que usa o gerador de números aleatórios do sistema operacional.
+- **GCM** é um modo **autenticado**: além de esconder o conteúdo, ele gera uma etiqueta de autenticação - a *tag*- que detecta qualquer alteração no arquivo. Se alguém mudar um caractere, por exemplo, a leitura falha, em vez de devolver dados corrompidos ou forjados.
 - Cada gravação usa um **IV** (vetor de inicialização) novo e aleatório, de 12 bytes. Assim, o mesmo conteúdo gravado duas vezes gera textos cifrados diferentes.
 - Cada arquivo fica no formato `iv:tag:conteúdo`, em hexadecimal.
 
 **Por que não outras opções:**
 - **AES-CBC** esconde o conteúdo, mas não detecta alterações; precisaria de um segundo mecanismo (HMAC) só para isso.
 - **AES-ECB** deixa padrões do conteúdo visíveis, porque blocos iguais geram cifras iguais.
-- Criar um algoritmo próprio nunca é recomendado em segurança.
+- Criar um algoritmo próprio não é uma boa prática em segurança.
 - Foi usado o módulo nativo do Node (`node:crypto`), sem bibliotecas externas.
 
 **Escrita atômica:** o sistema nunca sobrescreve um arquivo diretamente. Ele grava primeiro um arquivo temporário (`.tmp`) e só depois o renomeia por cima do original. Se o programa for interrompido no meio da gravação, o arquivo original continua inteiro.
 
 ### 2.2 Senhas (SHA-256 com salt)
 
-Um dos requisitos do projeto é que senhas sejam protegidas com o algoritmo de hash **SHA-256**.
+Um dos requisitos do projeto é que as senhas sejam protegidas com o algoritmo de hash **SHA-256**.
 
 - A senha propriamente dita **nunca é guardada**. O sistema guarda apenas o **hash**: um "resumo" de tamanho fixo (64 caracteres) calculado a partir da senha. 
 - No login, o sistema calcula o hash da senha digitada e compara com o guardado.
@@ -73,13 +73,10 @@ Um dos requisitos do projeto é que senhas sejam protegidas com o algoritmo de h
 - Na troca de senha, um salt novo é gerado.
 - A senha digitada é retirada do histórico de comandos, para não aparecer na seta para cima.
 
-**Por que este esquema:**
 - **Hash, e não criptografia:** as senhas nunca precisam ser lidas de volta, só conferidas. Com um hash de mão única, nem o próprio sistema consegue descobrir as senhas, então um vazamento do arquivo de credenciais não revela nenhuma senha diretamente.
-- **SHA-256:** é o algoritmo exigido pelo enunciado. Ele é um padrão amplamente usado e estudado, está disponível no módulo nativo do Node, e seu resultado de 256 bits torna inviável encontrar duas senhas com o mesmo hash.
+- **SHA-256:** Implementado como um dos critérios da atividade, ele é um padrão amplamente usado e estudado e está disponível no módulo nativo do Node. Gera sempre o mesmo resultado pra mesma entrada - o que permite verificação das senhas, funciona em mão única, ou seja, a partir do hash gerado em tese não é possível saber a senha (a não ser que se use de artimanhas fraudulentas, e para prevenir isso, usamos o salt).
 - **Salt:** sem ele, senhas iguais teriam hashes iguais, e um atacante poderia usar tabelas prontas com o hash de milhões de senhas comuns. Com um salt aleatório para cada usuário, essas tabelas deixam de servir, e cada senha precisaria ser atacada separadamente.
-- A limitação do SHA-256 para senhas, e a alternativa, estão na seção 7.
-
-**Diferença entre os dois "256" do projeto:** o SHA-256 é um **hash** (sem volta), usado nas senhas, que só precisam ser conferidas. O AES-256 é **criptografia** (com volta), usado nos arquivos, que precisam ser lidos de novo.
+- O uso do salt com SHA-256 possui limitações abordadas no tópico 7.
 
 ### 2.3 Sessão
 
