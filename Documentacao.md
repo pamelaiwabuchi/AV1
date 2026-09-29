@@ -28,6 +28,16 @@ A interface grava diretamente apenas três arquivos:
 
 ## 2. Segurança
 
+A segurança do sistema é organizada em camadas, cada uma protegendo contra um tipo de risco:
+
+| Camada | Protege contra | Seção |
+|---|---|---|
+| Criptografia dos arquivos (AES-256-GCM) | leitura e alteração dos dados por quem acessa os arquivos fora do sistema | 2.1 |
+| Hash das senhas (SHA-256 com salt) | descoberta das senhas, mesmo por quem tem o arquivo de credenciais | 2.2 |
+| Sessão com expiração | uso do sistema por outra pessoa num terminal deixado aberto | 2.3 |
+| Papéis e permissões | usuários fazendo o que não é da sua função | 2.4 |
+| Journal de transações | alterações sem rastro: tudo fica registrado, com quem fez e quando | 2.5 |
+
 ### 2.1 Criptografia dos arquivos (AES-256-GCM)
 
 O enunciado exige que os dados fiquem em arquivos, sem banco de dados, e que esses arquivos sejam criptografados.
@@ -63,14 +73,27 @@ Um dos requisitos do projeto é que senhas sejam protegidas com o algoritmo de h
 - Na troca de senha, um salt novo é gerado.
 - A senha digitada é retirada do histórico de comandos, para não aparecer na seta para cima.
 
+**Por que este esquema:**
+- **Hash, e não criptografia:** as senhas nunca precisam ser lidas de volta, só conferidas. Com um hash de mão única, nem o próprio sistema consegue descobrir as senhas, então um vazamento do arquivo de credenciais não revela nenhuma senha diretamente.
+- **SHA-256:** é o algoritmo exigido pelo enunciado. Ele é um padrão amplamente usado e estudado, está disponível no módulo nativo do Node, e seu resultado de 256 bits torna inviável encontrar duas senhas com o mesmo hash.
+- **Salt:** sem ele, senhas iguais teriam hashes iguais, e um atacante poderia usar tabelas prontas com o hash de milhões de senhas comuns. Com um salt aleatório para cada usuário, essas tabelas deixam de servir, e cada senha precisaria ser atacada separadamente.
+- A limitação do SHA-256 para senhas, e a alternativa, estão na seção 7.
+
 **Diferença entre os dois "256" do projeto:** o SHA-256 é um **hash** (sem volta), usado nas senhas, que só precisam ser conferidas. O AES-256 é **criptografia** (com volta), usado nos arquivos, que precisam ser lidos de novo.
 
 ### 2.3 Sessão
 
 - No login, o sistema cria uma **sessão** com um token aleatório de 32 bytes.
-- A sessão expira depois de **30 minutos sem uso**. A cada comando, o prazo é renovado - Obs: na próxima implementação o usuário será avisado quando faltar 5 minutos para expirar a atividade.
+- A sessão expira depois de **30 minutos sem uso**. A cada comando, o prazo é renovado.
 - Com a sessão expirada, o sistema pede o login de novo.
-- Ao sair, a sessão é encerrada.
+- Ao sair, a sessão é encerrada. Ao fechar e abrir o programa, o login é pedido outra vez.
+
+**Por que esta política:**
+- **Expirar por inatividade:** o maior risco numa aplicação de terminal é alguém se afastar do computador com o sistema aberto. Sem expiração, qualquer pessoa que passasse por ali poderia usar o sistema com as permissões de quem deixou aberto, e as ações ficariam registradas no journal em nome da pessoa errada.
+- **30 minutos, renovados a cada comando:** quem está trabalhando nunca é interrompido, porque cada comando reinicia o prazo; só uma sessão realmente abandonada expira. O tempo é longo o bastante para uma tarefa demorada (como avaliar os equipamentos de um lote) e curto o bastante para limitar a exposição de um terminal esquecido.
+- **Token aleatório de 32 bytes:** é gerado com o gerador seguro do sistema operacional, então não pode ser adivinhado.
+- **Sessão que não sobrevive ao fechamento do programa:** o sistema é usado por várias pessoas com papéis diferentes; lembrar o último login deixaria quem abrisse o terminal entrar com as permissões de outra pessoa.
+- Obs.: numa próxima versão, o usuário será avisado quando faltarem 5 minutos para a sessão expirar (ver seção 7).
 
 ### 2.4 Papéis e permissões
 
