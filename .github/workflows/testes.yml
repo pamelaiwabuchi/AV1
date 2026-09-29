@@ -1,0 +1,21 @@
+name: Testes
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  testes:
+    strategy:
+      fail-fast: false
+      matrix:
+        sistema: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.sistema }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run verificar
+      - run: npm test
