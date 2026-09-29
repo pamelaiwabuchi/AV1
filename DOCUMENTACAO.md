@@ -1,6 +1,6 @@
 # greencode — Documentação técnica
 
-Este documento explica as principais decisões do sistema: as escolhas de segurança e o motivo de cada uma, as regras de negócio que precisaram ser definidas, as diferenças em relação ao diagrama UML, os cenários de falha testados e as limitações conhecidas, bem como melhorias que serão implementadas na próxima AV.
+Este documento explica as principais decisões do sistema: as escolhas de segurança e o motivo de cada uma, as regras de negócio que precisaram ser definidas, as diferenças em relação ao diagrama UML, os cenários de falha testados e as limitações conhecidas, bem como melhorias que podem ser implementadas na próxima AV.
 
 Para instalar e usar o sistema, veja o [README](README.md).
 
@@ -75,6 +75,10 @@ Um dos requisitos do projeto é que as senhas sejam protegidas com o algoritmo d
 
 - **Hash, e não criptografia:** as senhas nunca precisam ser lidas de volta, só conferidas. Com um hash de mão única, nem o próprio sistema consegue descobrir as senhas, então um vazamento do arquivo de credenciais não revela nenhuma senha diretamente.
 - **SHA-256:** Implementado como um dos critérios da atividade, ele é um padrão amplamente usado e estudado e está disponível no módulo nativo do Node. Gera sempre o mesmo resultado pra mesma entrada - o que permite verificação das senhas, funciona em mão única, ou seja, a partir do hash gerado em tese não é possível saber a senha (a não ser que se use de artimanhas fraudulentas, e para prevenir isso, usamos o salt).
+- O hash também possui tamanho fixo, então não importa o tamanho da senha, sempre é gerado um hash de 64 caracteres.
+- É resistente a colisões, isso significa que as chances de termos 2 hashs parecidos é mínima.
+- UMa mudança mínima muda o hash inteiro
+- É usado no Bitcoin e usado nos ceritifcados dos sites (o cadeado HTTPS)
 - **Salt:** sem ele, senhas iguais teriam hashes iguais, e um atacante poderia usar tabelas prontas com o hash de milhões de senhas comuns. Com um salt aleatório para cada usuário, essas tabelas deixam de servir, e cada senha precisaria ser atacada separadamente.
 - O uso do salt com SHA-256 possui limitações abordadas no tópico 7.
 
